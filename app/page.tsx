@@ -8,10 +8,15 @@ import Navbar from "./components/Navbar";
 import Toolbar from "./components/Toolbar";
 import Editor from "./components/Editor";
 import Ruler from "./components/Ruler";
+import { Pagination } from "./components/pagination";
 
 export default function Home() {
   const editor = useEditor({
-    extensions: [StarterKit, Underline],
+    // The editor is rendered after mounting so the server and client markup match.
+    immediatelyRender: false,
+    // Keeps the toolbar's active states (bold, italic, ...) in sync.
+    shouldRerenderOnTransaction: true,
+    extensions: [StarterKit, Underline, Pagination],
     content: `
       <h1>Untitled document</h1>
       <p>Start writing your document...</p>

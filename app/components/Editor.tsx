@@ -1,85 +1,108 @@
 "use client";
 
 import { EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+
+import {
+  PAGE_HEIGHT_MM,
+  PAGE_MARGIN_MM,
+  PAGE_PITCH_PX,
+  PAGE_WIDTH_MM,
+  applyPagination,
+  pagesHeightPx,
+} from "./pagination";
 
 type EditorProps = {
   editor: TiptapEditor | null;
 };
 
-const MM_TO_PX = 96 / 25.4;
-const PAGE_HEIGHT_MM = 297;
-const PAGE_WIDTH_MM = 210;
-const PAGE_GAP_MM = 20;
-const PAGE_PADDING_MM = 25;
-
 function Editor({ editor }: EditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(1);
 
   useEffect(() => {
-    if (!containerRef.current || !editor) return;
+    if (!editor) return;
 
-    const updatePageCount = () => {
-      const proseMirror = containerRef.current?.querySelector(
-        ".ProseMirror",
-      ) as HTMLElement | null;
-      if (!proseMirror) return;
+    let destroyed = false;
+    let frame = 0;
 
-      const totalPaddingPx = (PAGE_PADDING_MM * 2) * MM_TO_PX;
-      const contentAreaHeightPx = (PAGE_HEIGHT_MM * MM_TO_PX) - totalPaddingPx;
-      const contentHeight = proseMirror.scrollHeight - totalPaddingPx;
-      const count = Math.max(1, Math.ceil(contentHeight / contentAreaHeightPx));
-      setPageCount(count);
+    const layout = () => {
+      frame = 0;
+      if (destroyed) return;
+
+      const count = applyPagination(editor.view);
+      if (count === null) return;
+
+      setPageCount((previous) => (previous === count ? previous : count));
     };
 
-    updatePageCount();
-    requestAnimationFrame(() => updatePageCount());
+    // Layout at most once per frame, and never while ProseMirror is still
+    // applying the transaction that changed the document.
+    const schedule = () => {
+      if (frame || destroyed) return;
+      frame = requestAnimationFrame(layout);
+    };
 
-    const resizeObserver = new ResizeObserver(() => updatePageCount());
-    const mutationObserver = new MutationObserver(() => updatePageCount());
-
-    const proseMirror = containerRef.current?.querySelector(
-      ".ProseMirror",
-    ) as HTMLElement | null;
-    if (proseMirror) {
-      resizeObserver.observe(proseMirror);
-      mutationObserver.observe(proseMirror, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-    }
-
-    editor.on("update", updatePageCount);
+    schedule();
+    editor.on("update", schedule);
+    window.addEventListener("resize", schedule);
+    // Web fonts change text metrics, which can move a page break.
+    document.fonts?.ready.then(schedule).catch(() => {});
 
     return () => {
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-      editor.off("update", updatePageCount);
+      destroyed = true;
+      if (frame) cancelAnimationFrame(frame);
+      editor.off("update", schedule);
+      window.removeEventListener("resize", schedule);
     };
   }, [editor]);
 
+  const pagesHeight = pagesHeightPx(pageCount);
+
   return (
-    <div className="flex justify-center px-4 pt-4">
-      <div ref={containerRef} className="relative">
+    <div className="flex justify-center px-4 py-4">
+      <div
+        className="relative"
+        style={
+          {
+            width: `${PAGE_WIDTH_MM}mm`,
+            // Read by `.ProseMirror`, so the editor always covers every sheet.
+            "--page-min-height": `${pagesHeight}px`,
+          } as CSSProperties
+        }
+      >
+        {/* The sheets are painted behind the transparent editor. */}
         <div
-          className="absolute inset-0 -z-10 flex flex-col items-center bg-white"
-          style={{ gap: `${PAGE_GAP_MM}mm` }}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-0"
         >
-          {Array.from({ length: pageCount }).map((_, i) => (
+          {Array.from({ length: pageCount }).map((_, page) => (
             <div
-              key={i}
-              className="page-sheet"
+              key={page}
+              className="page-sheet absolute left-0 top-0"
               style={{
+                top: `${page * PAGE_PITCH_PX}px`,
                 width: `${PAGE_WIDTH_MM}mm`,
                 height: `${PAGE_HEIGHT_MM}mm`,
               }}
-            />
+            >
+              {/* Sits inside the bottom margin, so it never collides with
+                  text, and fades into the page like a printed footer. */}
+              <span
+                className="page-number absolute text-[11px] leading-none tabular-nums"
+                style={{
+                  right: `${PAGE_MARGIN_MM}mm`,
+                  bottom: `${PAGE_MARGIN_MM / 2.5}mm`,
+                }}
+              >
+                {page + 1} of {pageCount}
+              </span>
+            </div>
           ))}
         </div>
 
-        <EditorContent editor={editor} />
+        <div className="relative z-10">
+          <EditorContent editor={editor} />
+        </div>
       </div>
     </div>
   );

@@ -20,18 +20,20 @@ body {
 }
 
 /*
-  VampDocs Print-Preview Pagination
+  VampDocs A4 Pagination
 
-  Architecture: ONE continuous TipTap .ProseMirror editor (transparent).
-  BEHIND it, .page-sheet divs render A4-sized white page outlines.
+  Architecture: ONE continuous TipTap .ProseMirror editor (transparent), with
+  white .page-sheet divs painted behind it, one per A4 page.
 
-  The .ProseMirror has background: transparent so page sheets behind it
-  show through — content is drawn on the white page sheets.
-  Page sheets sit BEHIND the editor (-z-10) with white container fill,
-  providing A4 page boundaries: white fill, border, and shadow.
-  Since .ProseMirror is transparent, all content appears on white.
+  The editor is exactly A4 wide with an A4 margin of padding, so its first page
+  is correct on its own. When text reaches past the bottom of the text area, the
+  pagination engine (app/components/pagination.ts) inserts an empty spacer at the
+  line where the page ends, which pushes the rest of the text down onto the next
+  sheet — so every page keeps the same margins and paddings.
 */
 
+/* Width and padding define the text area of a single page; the pagination
+   engine does the page breaks, so this element's height stays fluid. */
 .ProseMirror {
   outline: none;
   color: #000000;
@@ -41,14 +43,25 @@ body {
   width: 210mm;
   padding: 25mm;
   box-sizing: border-box;
-  min-height: 297mm;
+  min-height: var(--page-min-height, 297mm);
   margin: 0 auto;
 
   background: transparent;
   box-shadow: none;
   border: none;
+}
 
-  break-inside: avoid;
+/* The gap a page break leaves behind. Rendered as a ProseMirror decoration,
+   never as document content. */
+.page-break-spacer {
+  display: block;
+  width: 100%;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+  user-select: none;
 }
 
 .ProseMirror h1,
@@ -114,16 +127,18 @@ body {
   text-underline-offset: 0.15em;
 }
 
-/* Page sheet: visual A4 page outline BEHIND the transparent .ProseMirror.
-   - White fill + border + shadow = clear page boundary outline
-   - Container (.page-sheet parent) has white bg so gaps between sheets
-     show white, not light-gray workspace background
-   - Sits at -z-10 (behind .ProseMirror), so no pointer-events needed */
+/* A single A4 sheet, painted behind the transparent editor. The workspace
+   background shows through the gaps between sheets. */
 .page-sheet {
-  width: 210mm;
-  height: 297mm;
   background: white;
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
+}
+
+/* "1 of 3" footer on every sheet. */
+.page-number {
+  color: rgba(0, 0, 0, 0.38);
+  font-family: Arial, Helvetica, sans-serif;
+  user-select: none;
 }
