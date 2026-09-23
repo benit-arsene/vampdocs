@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+
+import MenuBar from "./MenuBar";
+import { useEditorUi } from "./editorUi";
 import {
   DocumentIcon,
   StarIcon,
@@ -14,13 +17,12 @@ import {
   UserIcon,
 } from "./icons";
 
-const MENU_ITEMS = ["File", "Edit", "View", "Insert", "Format", "Tools", "Extensions", "Help"];
-
 export default function Navbar() {
+  const { menusHidden } = useEditorUi();
   const [docTitle, setDocTitle] = useState("Untitled document");
 
   return (
-    <nav className="flex items-center justify-between border-b bg-white px-4 py-1 text-sm">
+    <nav className="relative z-30 flex items-center justify-between border-b bg-white px-4 py-1 text-sm">
       {/* LEFT: app icon + title + doc actions + menu bar */}
       <div className="flex items-center gap-1.5">
         <div className="flex items-center justify-center rounded bg-blue-100 p-1.5">
@@ -28,6 +30,7 @@ export default function Navbar() {
         </div>
 
         <input
+          id="doc-title"
           type="text"
           value={docTitle}
           onChange={(e) => setDocTitle(e.target.value)}
@@ -59,17 +62,7 @@ export default function Navbar() {
           <CloudIcon />
         </button>
 
-        <div className="flex items-center gap-0.5 border-l pl-2">
-          {MENU_ITEMS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              className="rounded px-2.5 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100"
-            >
-              {item}
-            </button>
-          ))}
-        </div>
+        {!menusHidden && <MenuBar />}
       </div>
 
       {/* RIGHT: version history + comments + video + share + avatar */}

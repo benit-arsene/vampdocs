@@ -15,7 +15,7 @@ const LABELS = Array.from(
 
 export default function Ruler() {
   return (
-    <div className="flex justify-center border-b border-gray-200 bg-gray-50 px-4">
+    <div className="ruler flex justify-center border-b border-gray-200 bg-gray-50 px-4">
       <div
         className="relative h-6 overflow-hidden"
         style={{ width: `${PAGE_WIDTH_MM}mm` }}

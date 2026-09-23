@@ -244,7 +244,16 @@ function computePageBreaks(view: EditorView): {
     return { decorations: DecorationSet.empty, pageCount: 1 };
   }
 
-  const editorTop = view.dom.getBoundingClientRect().top;
+  const editorRect = view.dom.getBoundingClientRect();
+  const editorTop = editorRect.top;
+
+  // The document can be zoomed, which scales every length we measure. Deriving
+  // the factor from the page width keeps the geometry below in the same units
+  // as the measurements, whatever the zoom is.
+  const scale = editorRect.width > 0 ? editorRect.width / PAGE_WIDTH_PX : 1;
+  const pageHeight = PAGE_HEIGHT_PX * scale;
+  const pageMargin = PAGE_MARGIN_PX * scale;
+  const pagePitch = PAGE_PITCH_PX * scale;
 
   // Blocks are looked up through the view, so stray DOM inside the editor
   // (ProseMirror's own drop cursor, gap cursor, ...) can never throw the
@@ -266,9 +275,9 @@ function computePageBreaks(view: EditorView): {
 
   if (blocks.length !== doc.childCount) return null;
 
-  const contentTop = (page: number) => page * PAGE_PITCH_PX + PAGE_MARGIN_PX;
+  const contentTop = (page: number) => page * pagePitch + pageMargin;
   const contentBottom = (page: number) =>
-    page * PAGE_PITCH_PX + PAGE_HEIGHT_PX - PAGE_MARGIN_PX;
+    page * pagePitch + pageHeight - pageMargin;
 
   const spacers: { pos: number; height: number }[] = [];
   let page = 0;
@@ -292,7 +301,8 @@ function computePageBreaks(view: EditorView): {
           shift += delta;
           top += delta;
           bottom += delta;
-          spacers.push({ pos: breakPos, height: delta });
+          // Heights live in the (possibly zoomed) document, so undo the zoom.
+          spacers.push({ pos: breakPos, height: delta / scale });
           page += 1;
         }
       }
@@ -327,6 +337,13 @@ function computePageBreaks(view: EditorView): {
  * flow, then applies the new ones. Returns the page count, or `null` when the
  * document could not be measured this time.
  */
+/** Removes every page-break spacer, e.g. when switching to a pageless view. */
+export function clearPagination(view: EditorView): void {
+  if (paginationKey.getState(view.state)?.find().length) {
+    view.dispatch(view.state.tr.setMeta(paginationKey, DecorationSet.empty));
+  }
+}
+
 export function applyPagination(view: EditorView): number | null {
   if (paginationKey.getState(view.state)?.find().length) {
     view.dispatch(view.state.tr.setMeta(paginationKey, DecorationSet.empty));

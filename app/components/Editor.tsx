@@ -1,26 +1,31 @@
 "use client";
 
-import { EditorContent, type Editor as TiptapEditor } from "@tiptap/react";
+import { EditorContent } from "@tiptap/react";
 import { useEffect, useState, type CSSProperties } from "react";
 
+import { useEditorUi } from "./editorUi";
 import {
   PAGE_HEIGHT_MM,
   PAGE_MARGIN_MM,
   PAGE_PITCH_PX,
   PAGE_WIDTH_MM,
   applyPagination,
+  clearPagination,
   pagesHeightPx,
 } from "./pagination";
 
-type EditorProps = {
-  editor: TiptapEditor | null;
-};
-
-function Editor({ editor }: EditorProps) {
+function Editor() {
+  const { editor, pageless } = useEditorUi();
   const [pageCount, setPageCount] = useState(1);
 
   useEffect(() => {
     if (!editor) return;
+
+    // Pageless view keeps the text flowing, so the page breaks come out.
+    if (pageless) {
+      clearPagination(editor.view);
+      return;
+    }
 
     let destroyed = false;
     let frame = 0;
@@ -54,19 +59,19 @@ function Editor({ editor }: EditorProps) {
       editor.off("update", schedule);
       window.removeEventListener("resize", schedule);
     };
-  }, [editor]);
+  }, [editor, pageless]);
 
   const pagesHeight = pagesHeightPx(pageCount);
 
   return (
-    <div className="flex justify-center px-4 py-4">
+    <div className="editor-scroll flex justify-center px-4 py-4">
       <div
         className="relative"
         style={
           {
             width: `${PAGE_WIDTH_MM}mm`,
             // Read by `.ProseMirror`, so the editor always covers every sheet.
-            "--page-min-height": `${pagesHeight}px`,
+            "--page-min-height": `${pageless ? 0 : pagesHeight}px`,
           } as CSSProperties
         }
       >
@@ -75,29 +80,33 @@ function Editor({ editor }: EditorProps) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-0 z-0"
         >
-          {Array.from({ length: pageCount }).map((_, page) => (
-            <div
-              key={page}
-              className="page-sheet absolute left-0 top-0"
-              style={{
-                top: `${page * PAGE_PITCH_PX}px`,
-                width: `${PAGE_WIDTH_MM}mm`,
-                height: `${PAGE_HEIGHT_MM}mm`,
-              }}
-            >
-              {/* Sits inside the bottom margin, so it never collides with
-                  text, and fades into the page like a printed footer. */}
-              <span
-                className="page-number absolute text-[11px] leading-none tabular-nums"
+          {pageless ? (
+            <div className="page-sheet absolute inset-0" />
+          ) : (
+            Array.from({ length: pageCount }).map((_, page) => (
+              <div
+                key={page}
+                className="page-sheet absolute left-0 top-0"
                 style={{
-                  right: `${PAGE_MARGIN_MM}mm`,
-                  bottom: `${PAGE_MARGIN_MM / 2.5}mm`,
+                  top: `${page * PAGE_PITCH_PX}px`,
+                  width: `${PAGE_WIDTH_MM}mm`,
+                  height: `${PAGE_HEIGHT_MM}mm`,
                 }}
               >
-                {page + 1} of {pageCount}
-              </span>
-            </div>
-          ))}
+                {/* Sits inside the bottom margin, so it never collides with
+                    text, and fades into the page like a printed footer. */}
+                <span
+                  className="page-number absolute text-[11px] leading-none tabular-nums"
+                  style={{
+                    right: `${PAGE_MARGIN_MM}mm`,
+                    bottom: `${PAGE_MARGIN_MM / 2.5}mm`,
+                  }}
+                >
+                  {page + 1} of {pageCount}
+                </span>
+              </div>
+            ))
+          )}
         </div>
 
         <div className="relative z-10">
