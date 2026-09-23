@@ -52,8 +52,7 @@ export default function Home() {
       attributes: { spellcheck: "false" },
     },
     content: `
-      <h1>Untitled document</h1>
-      <p>Start writing your document...</p>
+     
     `,
   });
 
