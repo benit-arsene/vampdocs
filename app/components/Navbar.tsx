@@ -20,6 +20,7 @@ import {
 } from "./icons";
 
 const STORAGE_KEY = "vampdocs-document-title";
+const STAR_KEY = "vampdocs-document-starred";
 const DEFAULT_TITLE = "Untitled document";
 
 /** Convert a document title into a safe URL slug. */
@@ -64,9 +65,19 @@ function loadTitle(): string {
   return DEFAULT_TITLE;
 }
 
+function loadStarred(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(STAR_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export default function Navbar() {
   const { menusHidden, editor } = useEditorUi();
   const [docTitle, setDocTitle] = useState<string>(loadTitle);
+  const [starred, setStarred] = useState<boolean>(loadStarred);
   const [shareOpen, setShareOpen] = useState(false);
 
   // Keep the URL in sync with the title — no reload, just replaceState.
@@ -83,6 +94,36 @@ export default function Navbar() {
       // Ignore persistence errors.
     }
   }, [docTitle]);
+
+  // Persist the starred flag.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STAR_KEY, starred ? "true" : "false");
+    } catch {
+      // Ignore persistence errors.
+    }
+  }, [starred]);
+
+  const toggleStar = () => setStarred((s) => !s);
+  const openMoveMenu = () => {
+    // Frontend-only: show an alert with the current title so the user gets
+    // feedback that the action was received.
+    window.alert(`Move "${docTitle || DEFAULT_TITLE}" — choose a destination.`);
+  };
+  const showSaveStatus = () => {
+    // Frontend-only: report the last saved state.
+    window.alert("Saved locally — your changes are stored in the browser.");
+  };
+  const openVersionHistory = () => {
+    window.alert("Version history is not yet connected.");
+  };
+  const openComments = () => {
+    window.alert("Comments are not yet connected.");
+  };
+  const openVideoCall = () => {
+    window.alert("Video call is not yet connected.");
+  };
 
   if (!editor) return null;
 
@@ -112,7 +153,10 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Star"
-            className="icon-btn text-gray-600 hover:text-gray-900"
+            onClick={toggleStar}
+            className={`icon-btn ${
+              starred ? "text-yellow-500" : "text-gray-600 hover:text-gray-900"
+            }`}
           >
             <StarIcon className="h-4 w-4" />
           </button>
@@ -120,6 +164,7 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Move"
+            onClick={openMoveMenu}
             className="icon-btn text-gray-600 hover:text-gray-900"
           >
             <FolderIcon className="h-4 w-4" />
@@ -128,6 +173,7 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Save status"
+            onClick={showSaveStatus}
             className="icon-btn text-gray-600 hover:text-gray-900"
           >
             <CloudIcon className="h-4 w-4" />
@@ -139,6 +185,7 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Version history"
+            onClick={openVersionHistory}
             className="icon-btn text-gray-600 hover:text-gray-900"
           >
             <HistoryIcon className="h-4 w-4" />
@@ -147,6 +194,7 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Comments"
+            onClick={openComments}
             className="icon-btn text-gray-600 hover:text-gray-900"
           >
             <CommentIcon className="h-4 w-4" />
@@ -155,6 +203,7 @@ export default function Navbar() {
           <button
             type="button"
             aria-label="Video call"
+            onClick={openVideoCall}
             className="icon-btn text-gray-600 hover:text-gray-900"
           >
             <VideoIcon className="h-4 w-4" />

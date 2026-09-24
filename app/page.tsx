@@ -10,6 +10,7 @@ import Ruler from "./components/Ruler";
 import { Pagination } from "./components/pagination";
 import { CommentMark, Highlight, TextStyle } from "./components/marks";
 import { Image } from "./components/imageNode";
+import { FindPlugin } from "./components/find";
 import { EditorUiProvider, useEditorUi } from "./components/editorUi";
 
 function Workspace() {
@@ -46,6 +47,7 @@ export default function Home() {
       Highlight,
       CommentMark,
       Image,
+      FindPlugin,
       Pagination,
     ],
     editorProps: {

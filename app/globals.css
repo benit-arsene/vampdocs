@@ -173,6 +173,19 @@ body {
   outline: 2px solid #1a73e8;
 }
 
+/* ---- Find in document ---- */
+.find-match {
+  background: rgba(255, 235, 59, 0.55);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(200, 200, 0, 0.4);
+}
+
+.find-match-active {
+  background: rgba(255, 140, 0, 0.7);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(200, 100, 0, 0.6);
+}
+
 /* ---- VampDocs UI chrome ---- */
 
 .doc-header {

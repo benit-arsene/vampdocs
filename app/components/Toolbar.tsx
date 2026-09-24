@@ -13,6 +13,12 @@ import {
 } from "./marks";
 import { CommentPanel, LinkPanel } from "./panels";
 import {
+  getFindState,
+  moveFindIndex,
+  selectCurrentMatch,
+  setFindTerm,
+} from "./find";
+import {
   BLOCK_STYLES,
   FONT_FAMILIES,
   FONT_SIZES,
@@ -111,54 +117,117 @@ function ColorPalette({
 }
 
 function FindPanel({ onClose }: { onClose: () => void }) {
+  const { editor } = useEditorUi();
   const [term, setTerm] = useState("");
-  const [message, setMessage] = useState("");
+  const [caseSensitive, setCaseSensitive] = useState(false);
+  const [state, setState] = useState(() =>
+    editor ? getFindState(editor.view) : undefined,
+  );
 
-  const search = (backwards: boolean) => {
-    if (!term) return;
+  // Keep the local state in sync with the plugin state so the UI reflects
+  // the latest matches whenever the document changes.
+  useEffect(() => {
+    if (!editor) return;
 
-    const find = (
-      window as unknown as {
-        find?: (
-          text: string,
-          caseSensitive?: boolean,
-          backwards?: boolean,
-          wrap?: boolean,
-        ) => boolean;
+    const update = () => {
+      const next = getFindState(editor.view);
+      if (next) {
+        setTerm(next.term);
+        setCaseSensitive(next.caseSensitive);
+        setState(next);
       }
-    ).find;
+    };
 
-    if (typeof find !== "function") {
-      setMessage("Not supported here");
-      return;
+    editor.on("update", update);
+    editor.on("selectionUpdate", update);
+    update();
+
+    return () => {
+      editor.off("update", update);
+      editor.off("selectionUpdate", update);
+    };
+  }, [editor]);
+
+  const performSearch = (nextTerm: string, nextCase: boolean) => {
+    if (!editor) return;
+    setFindTerm(editor.view, nextTerm, nextCase);
+    const result = getFindState(editor.view);
+    if (result) setState(result);
+    if (result && result.matches.length > 0) {
+      selectCurrentMatch(editor.view);
     }
-
-    setMessage(find.call(window, term, false, backwards, true) ? "" : "No matches");
   };
+
+  const onTermChange = (value: string) => {
+    setTerm(value);
+    performSearch(value, caseSensitive);
+  };
+
+  const onCaseToggle = () => {
+    const next = !caseSensitive;
+    setCaseSensitive(next);
+    performSearch(term, next);
+  };
+
+  const go = (direction: 1 | -1) => {
+    if (!editor || !state || state.matches.length === 0) return;
+    moveFindIndex(editor.view, direction);
+    selectCurrentMatch(editor.view);
+    const result = getFindState(editor.view);
+    if (result) setState(result);
+  };
+
+  const count = state?.matches.length ?? 0;
+  const index = state?.currentIndex ?? -1;
+  const resultLabel =
+    count === 0 ? "No matches" : `${index + 1} of ${count}`;
 
   return (
     <div className="absolute right-3 top-full z-50 mt-1 flex items-center gap-1 rounded border border-gray-200 bg-white p-1 shadow-lg">
       <input
         autoFocus
         value={term}
-        onChange={(event) => setTerm(event.target.value)}
+        onChange={(event) => onTermChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") search(event.shiftKey);
+          if (event.key === "Enter") {
+            if (event.shiftKey) {
+              go(-1);
+            } else {
+              go(1);
+            }
+          }
           if (event.key === "Escape") onClose();
         }}
         placeholder="Find in document"
         className="w-52 rounded border border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
       />
-      <span className="max-w-24 truncate text-xs text-gray-500">{message}</span>
+      <button
+        type="button"
+        onClick={onCaseToggle}
+        className={`shrink-0 rounded px-2 py-1 text-xs font-medium ${
+          caseSensitive
+            ? "bg-blue-100 text-blue-900"
+            : "text-gray-600 hover:bg-gray-100"
+        }`}
+        title="Match case"
+        aria-pressed={caseSensitive}
+      >
+        Aa
+      </button>
+      <span className="max-w-24 truncate text-xs text-gray-500">
+        {resultLabel}
+      </span>
       <ToolbarButton
         icon={<ChevronUpIcon className="h-4 w-4" />}
         label="Previous match"
-        onClick={() => search(true)}
+        disabled={count === 0}
+        onClick={() => go(-1)}
       />
       <ToolbarButton
         icon={<ChevronDownIcon className="h-4 w-4" />}
         label="Next match"
-        onClick={() => search(false)}
+        disabled={count === 0}
+        onClick={() => go(1)}
       />
       <ToolbarButton
         icon={<XIcon className="h-4 w-4" />}
