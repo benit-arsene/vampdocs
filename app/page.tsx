@@ -11,10 +11,11 @@ import { Pagination } from "./components/pagination";
 import { CommentMark, Highlight, TextStyle } from "./components/marks";
 import { Image } from "./components/imageNode";
 import { FindPlugin } from "./components/find";
+import { ParagraphIndent } from "./components/paragraphIndent";
 import { EditorUiProvider, useEditorUi } from "./components/editorUi";
 
 function Workspace() {
-  const { zoom, rulerVisible } = useEditorUi();
+  const { zoom, rulerVisible, editor } = useEditorUi();
 
   return (
     <main className="min-h-screen">
@@ -24,7 +25,7 @@ function Workspace() {
 
       {/* The ruler and the pages zoom together, like in a word processor. */}
       <div style={{ zoom }}>
-        {rulerVisible && <Ruler />}
+        {rulerVisible && <Ruler editor={editor} />}
 
         <Editor />
       </div>
@@ -42,12 +43,14 @@ export default function Home() {
       // StarterKit already brings link and underline with it.
       StarterKit.configure({
         link: { openOnClick: false },
+        paragraph: false,
       }),
       TextStyle,
       Highlight,
       CommentMark,
       Image,
       FindPlugin,
+      ParagraphIndent,
       Pagination,
     ],
     editorProps: {
