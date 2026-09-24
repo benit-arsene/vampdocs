@@ -1,13 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8f8f8;
-  --foreground: #000000;
+  --background: #f8f9fa;
+  --foreground: #1a1a1a;
+  --workspace: #f1f3f4;
+  --toolbar-bg: #ffffff;
+  --border-light: #e2e8f0;
+  --border-medium: #cbd5e1;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-workspace: var(--workspace);
+  --color-toolbar-bg: var(--toolbar-bg);
+  --color-border-light: var(--border-light);
+  --color-border-medium: var(--border-medium);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -134,7 +142,9 @@ body {
 .page-sheet {
   background: white;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06);
   box-sizing: border-box;
 }
 
@@ -163,11 +173,167 @@ body {
   outline: 2px solid #1a73e8;
 }
 
-/*
-  Printing: the app chrome is dropped and the browser paginates the text flow
-  itself, with the same 25mm margins and 160mm text width as the screen, so the
-  printed line breaks match what the page breaks produce on screen.
-*/
+/* ---- VampDocs UI chrome ---- */
+
+.doc-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.app-menu {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.app-menu-trigger {
+  min-width: 2.75rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #475569;
+  border-radius: 0.375rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.app-menu-trigger:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1e293b;
+}
+
+.app-menu-trigger[aria-expanded="true"],
+.app-menu-trigger:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.toolbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.toolbar-btn {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
+  color: #475569;
+  border-radius: 0.375rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1e293b;
+}
+
+.toolbar-btn[aria-pressed="true"],
+.toolbar-btn.active {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.toolbar-btn[aria-pressed="true"]:hover,
+.toolbar-btn.active:hover {
+  background: #bfdbfe;
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 1.5rem;
+  background: #cbd5e1;
+  margin: 0 0.5rem;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  color: #475569;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1e293b;
+}
+
+.icon-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.doc-title-input {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  border: none;
+  background: transparent;
+  outline: none;
+  min-width: 12rem;
+}
+
+.doc-title-input::placeholder {
+  color: #94a3b8;
+}
+
+/* ---- Ruler ---- */
+
+.ruler {
+  background: #f8f9fa;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ruler-track {
+  height: 1.75rem;
+  position: relative;
+}
+
+.ruler-margin-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.ruler-tick-long {
+  position: absolute;
+  bottom: 0;
+  border-left: 1px solid #94a3b8;
+  height: 1rem;
+}
+
+.ruler-tick-short {
+  position: absolute;
+  bottom: 0;
+  border-left: 1px solid #cbd5e1;
+  height: 0.5rem;
+}
+
+.ruler-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 0.625rem;
+  line-height: 1;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Editor scroll area ---- */
+
+.editor-scroll {
+  background: #f1f3f4;
+}
+
+/* ---- Print ---- */
 @media print {
   @page {
     size: A4 portrait;

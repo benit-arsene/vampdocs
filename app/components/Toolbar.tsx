@@ -30,7 +30,6 @@ import {
   LinkIcon,
   MinusIcon,
   MoreHorizontalIcon,
-  PencilIcon,
   PlusIcon,
   PrinterIcon,
   SearchIcon,
@@ -66,15 +65,15 @@ const ToolbarButton = ({
     aria-label={label}
     title={label}
     aria-pressed={active}
-    className={`flex shrink-0 items-center justify-center rounded px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent ${
-      active ? "bg-blue-100 text-blue-900 hover:bg-blue-200" : ""
+    className={`toolbar-btn ${
+      active ? "active" : ""
     }`}
   >
     {icon}
   </button>
 );
 
-const Divider = () => <div className="h-5 w-px shrink-0 bg-gray-300" />;
+const Divider = () => <div className="toolbar-separator" />;
 
 function ColorPalette({
   colors,
@@ -267,7 +266,7 @@ export default function Toolbar() {
   return (
     // Wraps instead of scrolling sideways: an overflow container would clip the
     // dropdown panels hanging below the bar.
-    <div className="toolbar relative z-20 flex flex-wrap items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-1 text-sm">
+    <div className="toolbar relative z-20 flex flex-wrap items-center gap-1 border-b border-gray-200 bg-white px-3 py-1.5 text-sm">
       {/* Find, history and document actions */}
       <ToolbarButton
         icon={<SearchIcon className="h-4 w-4" />}
@@ -357,8 +356,9 @@ export default function Toolbar() {
       />
       <Dropdown
         title="Zoom"
-        triggerClassName="justify-center"
+        triggerClassName="toolbar-btn justify-center"
         panelClassName="w-28"
+        showChevron={false}
         label={
           <span className="w-10 text-center text-gray-600">
             {Math.round(zoom * 100)}%
@@ -393,6 +393,8 @@ export default function Toolbar() {
       <Dropdown
         title="Text style"
         panelClassName="w-44"
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={<span>{activeBlockStyle.label}</span>}
       >
         {(close) =>
@@ -417,6 +419,8 @@ export default function Toolbar() {
       <Dropdown
         title="Font"
         panelClassName="max-h-80 w-60 overflow-y-auto"
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={<span style={{ fontFamily }}>{fontFamily}</span>}
       >
         {(close) =>
@@ -438,7 +442,7 @@ export default function Toolbar() {
       <Divider />
 
       {/* Font size */}
-      <div className="flex shrink-0 items-center gap-0.5 rounded border border-gray-300">
+      <div className="flex shrink-0 items-center rounded border border-gray-300">
         <ToolbarButton
           icon={<MinusIcon className="h-3 w-3" />}
           label="Decrease font size"
@@ -447,7 +451,8 @@ export default function Toolbar() {
         <Dropdown
           title="Font size"
           panelClassName="max-h-80 w-20 overflow-y-auto"
-          triggerClassName="justify-center"
+          triggerClassName="toolbar-btn justify-center"
+          showChevron={false}
           label={
             <span className="w-8 text-center text-gray-600">{fontSize}</span>
           }
@@ -507,6 +512,8 @@ export default function Toolbar() {
         title="Text colour"
         panelClassName="w-44"
         active={Boolean(textStyle.color)}
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={
           <span className="flex flex-col items-center">
             <TextColorIcon className="h-4 w-4" />
@@ -535,6 +542,8 @@ export default function Toolbar() {
         title="Highlight colour"
         panelClassName="w-44"
         active={editor.isActive("highlight")}
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={<HighlighterIcon className="h-4 w-4" />}
       >
         {(close) => (
@@ -565,6 +574,8 @@ export default function Toolbar() {
         panelClassName="w-fit"
         align="right"
         active={editor.isActive("link")}
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={<LinkIcon className="h-4 w-4" />}
       >
         {(close) => <LinkPanel editor={editor} close={close} />}
@@ -574,6 +585,8 @@ export default function Toolbar() {
         panelClassName="w-fit"
         align="right"
         active={editor.isActive("comment")}
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={<CommentIcon className="h-4 w-4" />}
       >
         {(close) => <CommentPanel editor={editor} close={close} />}
@@ -605,6 +618,8 @@ export default function Toolbar() {
         title="More"
         panelClassName="w-56"
         align="right"
+        triggerClassName="toolbar-btn"
+        showChevron={false}
         label={<MoreHorizontalIcon className="h-4 w-4" />}
       >
         {(close) => (
@@ -654,42 +669,6 @@ export default function Toolbar() {
       </Dropdown>
 
       <Divider />
-
-      {/* Editing mode and menu collapsing */}
-      <Dropdown
-        title="Editing mode"
-        panelClassName="w-40"
-        align="right"
-        label={
-          <span className="flex items-center gap-1">
-            <PencilIcon className="h-3 w-3" />
-            <span>{editor.isEditable ? "Editing" : "Viewing"}</span>
-          </span>
-        }
-      >
-        {(close) => (
-          <>
-            <DropdownItem
-              checked={editor.isEditable}
-              onClick={() => {
-                editor.setEditable(true);
-                close();
-              }}
-            >
-              Editing
-            </DropdownItem>
-            <DropdownItem
-              checked={!editor.isEditable}
-              onClick={() => {
-                editor.setEditable(false);
-                close();
-              }}
-            >
-              Viewing
-            </DropdownItem>
-          </>
-        )}
-      </Dropdown>
 
       <ToolbarButton
         icon={

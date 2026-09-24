@@ -17,16 +17,16 @@ export default function Ruler() {
   return (
     <div className="ruler flex justify-center border-b border-gray-200 bg-gray-50 px-4">
       <div
-        className="relative h-6 overflow-hidden"
+        className="relative ruler-track"
         style={{ width: `${PAGE_WIDTH_MM}mm` }}
       >
         {/* Margins of the text area, so the printable width is obvious. */}
         <div
-          className="absolute inset-y-0 left-0 bg-gray-200/80"
+          className="ruler-margin-zone left-0"
           style={{ width: `${PAGE_MARGIN_MM}mm` }}
         />
         <div
-          className="absolute inset-y-0 right-0 bg-gray-200/80"
+          className="ruler-margin-zone right-0"
           style={{ width: `${PAGE_MARGIN_MM}mm` }}
         />
 
@@ -38,8 +38,8 @@ export default function Ruler() {
               key={position}
               className={`absolute bottom-0 border-l ${
                 isCentimetre
-                  ? "h-3 border-gray-400"
-                  : "h-1.5 border-gray-300"
+                  ? "ruler-tick-long"
+                  : "ruler-tick-short"
               }`}
               style={{ left: `${position}mm` }}
             />
@@ -49,7 +49,7 @@ export default function Ruler() {
         {LABELS.map((position) => (
           <span
             key={position}
-            className="absolute top-0 -translate-x-1/2 text-[10px] leading-none text-gray-400"
+            className="ruler-label"
             style={{ left: `${position}mm` }}
           >
             {position / 10}

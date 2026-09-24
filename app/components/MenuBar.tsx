@@ -124,13 +124,14 @@ export default function MenuBar() {
   });
 
   return (
-    <div className="flex items-center gap-0.5 border-l pl-2">
+    <div className="flex items-center gap-0.5">
       {/* File */}
       <Dropdown
         {...menuProps("File")}
         title="File"
         panelClassName="w-60"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>File</span>}
       >
         {(close) => (
@@ -194,7 +195,8 @@ export default function MenuBar() {
         {...menuProps("Edit")}
         title="Edit"
         panelClassName="w-64"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>Edit</span>}
       >
         {(close) => (
@@ -284,7 +286,8 @@ export default function MenuBar() {
         {...menuProps("View")}
         title="View"
         panelClassName="w-56"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>View</span>}
       >
         {(close) => (
@@ -364,7 +367,8 @@ export default function MenuBar() {
         {...menuProps("Insert")}
         title="Insert"
         panelClassName="w-fit min-w-40"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>Insert</span>}
       >
         {(close) => <InsertMenu close={close} />}
@@ -375,7 +379,8 @@ export default function MenuBar() {
         {...menuProps("Format")}
         title="Format"
         panelClassName="w-60"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>Format</span>}
       >
         {(close) => (
@@ -469,7 +474,8 @@ export default function MenuBar() {
         {...menuProps("Tools")}
         title="Tools"
         panelClassName="w-64"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>Tools</span>}
       >
         {(close) => (
@@ -508,7 +514,8 @@ export default function MenuBar() {
         {...menuProps("Extensions")}
         title="Extensions"
         panelClassName="w-64"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>Extensions</span>}
       >
         {(close) => (
@@ -544,7 +551,8 @@ export default function MenuBar() {
         title="Help"
         panelClassName="w-64"
         align="right"
-        triggerClassName="font-medium"
+        triggerClassName="app-menu-trigger"
+        showChevron={false}
         label={<span>Help</span>}
       >
         {(close) => (

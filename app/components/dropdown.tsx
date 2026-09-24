@@ -144,7 +144,7 @@ export function DropdownItem({
 }
 
 export function DropdownSeparator() {
-  return <div className="my-1 h-px bg-gray-200" />;
+  return <div className="mx-3 my-1 h-px bg-gray-200" />;
 }
 
 /** Non-interactive row, for information inside a menu. */
