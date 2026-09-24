@@ -294,13 +294,14 @@ body {
 .ruler-track {
   height: 1.75rem;
   position: relative;
+  overflow: hidden;
 }
 
 .ruler-margin-zone {
   position: absolute;
   top: 0;
   bottom: 0;
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(148, 163, 184, 0.45);
 }
 
 .ruler-tick-long {

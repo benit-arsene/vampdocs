@@ -22,11 +22,11 @@ export default function Ruler() {
       >
         {/* Margins of the text area, so the printable width is obvious. */}
         <div
-          className="ruler-margin-zone left-0"
+          className="absolute inset-y-0 left-0 bg-gray-200/80"
           style={{ width: `${PAGE_MARGIN_MM}mm` }}
         />
         <div
-          className="ruler-margin-zone right-0"
+          className="absolute inset-y-0 right-0 bg-gray-200/80"
           style={{ width: `${PAGE_MARGIN_MM}mm` }}
         />
 
@@ -38,8 +38,8 @@ export default function Ruler() {
               key={position}
               className={`absolute bottom-0 border-l ${
                 isCentimetre
-                  ? "ruler-tick-long"
-                  : "ruler-tick-short"
+                  ? "h-3 border-gray-400"
+                  : "h-1.5 border-gray-300"
               }`}
               style={{ left: `${position}mm` }}
             />
@@ -49,7 +49,7 @@ export default function Ruler() {
         {LABELS.map((position) => (
           <span
             key={position}
-            className="ruler-label"
+            className="absolute top-0 -translate-x-1/2 text-[10px] leading-none text-gray-400"
             style={{ left: `${position}mm` }}
           >
             {position / 10}

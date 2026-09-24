@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import MenuBar from "./MenuBar";
 import { Dropdown, DropdownItem } from "./dropdown";
+import { ShareDialog } from "./ShareDialog";
 import { useEditorUi } from "./editorUi";
 import {
   DocumentIcon,
@@ -18,9 +19,34 @@ import {
   UserIcon,
 } from "./icons";
 
+const STORAGE_KEY = "vampdocs-document-title";
+const DEFAULT_TITLE = "Untitled document";
+
+function loadTitle(): string {
+  if (typeof window === "undefined") return DEFAULT_TITLE;
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved && saved.trim()) return saved;
+  } catch {
+    // localStorage may be unavailable (private mode, quota, etc.) — fall back.
+  }
+  return DEFAULT_TITLE;
+}
+
 export default function Navbar() {
   const { menusHidden, editor } = useEditorUi();
-  const [docTitle, setDocTitle] = useState("Untitled document");
+  const [docTitle, setDocTitle] = useState<string>(loadTitle);
+  const [shareOpen, setShareOpen] = useState(false);
+
+  // Persist the title to localStorage on every change.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, docTitle);
+    } catch {
+      // Ignore persistence errors.
+    }
+  }, [docTitle]);
 
   if (!editor) return null;
 
@@ -39,6 +65,10 @@ export default function Navbar() {
             type="text"
             value={docTitle}
             onChange={(e) => setDocTitle(e.target.value)}
+            onBlur={() => {
+              // If the user clears the title completely, restore the default.
+              if (!docTitle.trim()) setDocTitle(DEFAULT_TITLE);
+            }}
             className="doc-title-input w-56 border-none bg-transparent outline-none placeholder-gray-500"
             placeholder="Untitled document"
           />
@@ -135,6 +165,7 @@ export default function Navbar() {
 
           <button
             type="button"
+            onClick={() => setShareOpen(true)}
             className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <LockIcon className="h-4 w-4" />
@@ -161,6 +192,12 @@ export default function Navbar() {
           </div>
         </div>
       )}
+
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        docTitle={docTitle}
+      />
     </nav>
   );
 }
