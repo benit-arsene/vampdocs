@@ -22,6 +22,37 @@ import {
 const STORAGE_KEY = "vampdocs-document-title";
 const DEFAULT_TITLE = "Untitled document";
 
+/** Convert a document title into a safe URL slug. */
+function titleToSlug(title: string): string {
+  return title
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "") // Remove unsafe chars (keeps letters, digits, spaces, hyphens).
+    .replace(/\s+/g, "-") // Spaces → hyphens.
+    .replace(/-+/g, "-") // Collapse repeated hyphens.
+    .replace(/^-|-$/g, ""); // Trim leading/trailing hyphens.
+}
+
+/** Update the browser URL without reloading, using the History API. */
+function syncUrl(title: string): void {
+  if (typeof window === "undefined") return;
+
+  const slug = titleToSlug(title);
+  const targetPath = slug ? `/${slug}` : "/";
+
+  // Only update if the path actually changed — avoids polluting the history
+  // on every keystroke when the slug is identical.
+  if (window.location.pathname !== targetPath) {
+    const fullUrl = `${window.location.origin}${targetPath}`;
+    try {
+      window.history.replaceState(null, "", fullUrl);
+    } catch {
+      // Some browsers may reject non-ASCII URLs even after normalization.
+    }
+  }
+}
+
 function loadTitle(): string {
   if (typeof window === "undefined") return DEFAULT_TITLE;
   try {
@@ -37,6 +68,11 @@ export default function Navbar() {
   const { menusHidden, editor } = useEditorUi();
   const [docTitle, setDocTitle] = useState<string>(loadTitle);
   const [shareOpen, setShareOpen] = useState(false);
+
+  // Keep the URL in sync with the title — no reload, just replaceState.
+  useEffect(() => {
+    syncUrl(docTitle);
+  }, [docTitle]);
 
   // Persist the title to localStorage on every change.
   useEffect(() => {

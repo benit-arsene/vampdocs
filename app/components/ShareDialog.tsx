@@ -13,9 +13,6 @@ export function ShareDialog({ open, onClose, docTitle }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
 
-  // Generate a reasonable local document URL from the current browser URL.
-  const link = typeof window !== "undefined" ? window.location.href : "";
-
   useEffect(() => {
     if (!open) return;
 
@@ -30,10 +27,12 @@ export function ShareDialog({ open, onClose, docTitle }: ShareDialogProps) {
   }, [open, onClose]);
 
   const handleCopy = async () => {
+    // Always read the current URL at click time so it stays in sync.
+    const link = typeof window !== "undefined" ? window.location.href : "";
+
     try {
       await navigator.clipboard.writeText(link);
     } catch {
-      // Fallback for browsers without clipboard API or when permissions are denied.
       const textarea = document.createElement("textarea");
       textarea.value = link;
       textarea.style.position = "fixed";
@@ -72,7 +71,6 @@ export function ShareDialog({ open, onClose, docTitle }: ShareDialogProps) {
         className="relative w-full max-w-md rounded-lg border border-gray-200 bg-white shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h2
             id="share-dialog-title"
@@ -90,7 +88,6 @@ export function ShareDialog({ open, onClose, docTitle }: ShareDialogProps) {
           </button>
         </div>
 
-        {/* Content */}
         <div className="px-4 py-3">
           <p className="mb-2 text-sm text-gray-500">
             Anyone with the link can view this document.
@@ -105,7 +102,6 @@ export function ShareDialog({ open, onClose, docTitle }: ShareDialogProps) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
           <span
             className={`text-sm transition-opacity duration-200 ${
