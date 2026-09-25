@@ -37,6 +37,43 @@ function documentHtml(html: string) {
 </html>`;
 }
 
+function importTxtFile(
+  file: File,
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Failed to read file as text"));
+        return;
+      }
+      const text = reader.result;
+      // Split by double newlines for paragraphs, or single newlines
+      // Normalize line endings first
+      const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      // Split into paragraphs (double newline = paragraph break, single newline = line break within paragraph)
+      const paragraphs = normalized.split("\n\n").filter((p) => p.trim().length > 0);
+      
+      // Build TipTap content: each paragraph becomes a separate paragraph node
+      const content = paragraphs.map((para) => ({
+        type: "paragraph",
+        content: [{ type: "text", text: para.replace(/\n/g, " ") }],
+      }));
+      
+      try {
+        editor.commands.setContent({ type: "doc", content });
+        editor.commands.focus("start");
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
 /** Insert menu, which can swap its list for the link or comment form. */
 function InsertMenu({ close }: { close: () => void }) {
   const { editor } = useEditorUi();
@@ -164,7 +201,11 @@ export default function MenuBar() {
             <DropdownItem
               onClick={() => {
                 close();
-                downloadFile("document.html", documentHtml(editor.getHTML()), "text/html");
+                downloadFile(
+                  "document.html",
+                  documentHtml(editor.getHTML()),
+                  "text/html",
+                );
               }}
             >
               Download as HTML
@@ -325,7 +366,9 @@ export default function MenuBar() {
                 const index = ZOOM_LEVELS.findIndex(
                   (level) => Math.abs(level - ui.zoom) < 0.001,
                 );
-                ui.setZoom(ZOOM_LEVELS[Math.min(ZOOM_LEVELS.length - 1, index + 1)]);
+                ui.setZoom(
+                  ZOOM_LEVELS[Math.min(ZOOM_LEVELS.length - 1, index + 1)],
+                );
                 close();
               }}
             >
@@ -359,9 +402,11 @@ export default function MenuBar() {
                 if (document.fullscreenElement) {
                   void document.exitFullscreen();
                 } else {
-                  void document.documentElement.requestFullscreen().catch(() => {
-                    setFullScreen(false);
-                  });
+                  void document.documentElement
+                    .requestFullscreen()
+                    .catch(() => {
+                      setFullScreen(false);
+                    });
                 }
               }}
             >
@@ -542,10 +587,7 @@ export default function MenuBar() {
             <DropdownLabel>Enabled editor extensions</DropdownLabel>
             <div className="max-h-52 overflow-y-auto">
               {extensionNames.map((name) => (
-                <div
-                  key={name}
-                  className="px-3 py-0.5 text-xs text-gray-500"
-                >
+                <div key={name} className="px-3 py-0.5 text-xs text-gray-500">
                   {name}
                 </div>
               ))}
@@ -596,12 +638,13 @@ export default function MenuBar() {
             >
               Editor documentation
             </DropdownItem>
-            <DropdownItem disabled>About VampDocs — Next.js + Tiptap</DropdownItem>
+            <DropdownItem disabled>
+              About VampDocs — Next.js + Tiptap
+            </DropdownItem>
           </>
         )}
       </Dropdown>
 
-      {/* Hidden file input for Import */}
       <input
         type="file"
         ref={fileInputRef}
@@ -610,13 +653,30 @@ export default function MenuBar() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
-            console.log("Imported file:", {
-              name: file.name,
-              type: file.type,
-              size: file.size,
-            });
+            // Only handle .txt files for now
+            if (file.name.toLowerCase().endsWith(".txt") || file.type === "text/plain") {
+              importTxtFile(file, editor)
+                .then(() => {
+                  console.log("Imported file:", {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                  });
+                })
+                .catch((err) => {
+                  console.error("Failed to import TXT file:", err);
+                  window.alert(`Failed to import "${file.name}": ${err.message}`);
+                });
+            } else {
+              // For non-txt files, just log for now (HTML/DOCX will be implemented later)
+              console.log("Imported file (not yet supported):", {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+              });
+            }
           }
-          // Reset value so the same file can be selected again
+
           if (e.target) e.target.value = "";
         }}
       />
