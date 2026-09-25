@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { convertToHtml } from "mammoth";
 
 import {
   Dropdown,
@@ -131,6 +132,64 @@ function importHtmlFile(
     };
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsText(file);
+  });
+}
+
+function importDocxFile(
+  file: File,
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (!(reader.result instanceof ArrayBuffer)) {
+        reject(new Error("Failed to read file as array buffer"));
+        return;
+      }
+      
+      try {
+        // Convert DOCX to HTML using mammoth
+        const result = await convertToHtml({ arrayBuffer: reader.result });
+        
+        if (result.messages.length > 0) {
+          // Log warnings but don't fail
+          result.messages.forEach((msg) => console.warn("DOCX import warning:", msg.message));
+        }
+        
+        const html = result.value;
+        
+        if (!html || html.trim().length === 0) {
+          reject(new Error("No content found in DOCX file"));
+          return;
+        }
+        
+        // Parse the generated HTML using our existing HTML parser
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        
+        const parserError = doc.querySelector("parsererror");
+        if (parserError) {
+          reject(new Error("Failed to parse DOCX content"));
+          return;
+        }
+        
+        const body = doc.body || doc.documentElement;
+        const content = htmlToTipTapContent(body);
+        
+        if (content.length === 0) {
+          reject(new Error("No importable content found in DOCX file"));
+          return;
+        }
+        
+        editor.commands.setContent({ type: "doc", content });
+        editor.commands.focus("start");
+        resolve();
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to import DOCX file"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsArrayBuffer(file);
   });
 }
 
@@ -884,6 +943,7 @@ export default function MenuBar() {
             const fileName = file.name.toLowerCase();
             const isTxt = fileName.endsWith(".txt") || file.type === "text/plain";
             const isHtml = fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html";
+            const isDocx = fileName.endsWith(".docx") || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
             
             if (isTxt) {
               importTxtFile(file, editor)
@@ -911,8 +971,21 @@ export default function MenuBar() {
                   console.error("Failed to import HTML file:", err);
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
+            } else if (isDocx) {
+              importDocxFile(file, editor)
+                .then(() => {
+                  console.log("Imported file:", {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                  });
+                })
+                .catch((err) => {
+                  console.error("Failed to import DOCX file:", err);
+                  window.alert(`Failed to import "${file.name}": ${err.message}`);
+                });
             } else {
-              // For non-txt/html files, just log for now (DOCX will be implemented later)
+              // For unsupported files, just log
               console.log("Imported file (not yet supported):", {
                 name: file.name,
                 type: file.type,

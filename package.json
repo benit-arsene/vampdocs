@@ -13,6 +13,7 @@
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
+    "mammoth": "^1.12.3",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8"
