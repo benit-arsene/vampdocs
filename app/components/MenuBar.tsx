@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   Dropdown,
@@ -95,6 +95,7 @@ export default function MenuBar() {
   const { editor } = ui;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
 
@@ -175,6 +176,14 @@ export default function MenuBar() {
               }}
             >
               Download as plain text
+            </DropdownItem>
+            <DropdownItem
+              onClick={() => {
+                close();
+                fileInputRef.current?.click();
+              }}
+            >
+              Import
             </DropdownItem>
             <DropdownSeparator />
             <DropdownItem
@@ -591,6 +600,26 @@ export default function MenuBar() {
           </>
         )}
       </Dropdown>
+
+      {/* Hidden file input for Import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept=".txt,.html,.htm,.docx"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            console.log("Imported file:", {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+            });
+          }
+          // Reset value so the same file can be selected again
+          if (e.target) e.target.value = "";
+        }}
+      />
     </div>
   );
 }
