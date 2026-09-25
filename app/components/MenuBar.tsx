@@ -37,6 +37,20 @@ function documentHtml(html: string) {
 </html>`;
 }
 
+// TipTap node types for HTML import
+interface TipTapNode {
+  type: string;
+  content?: TipTapNode[];
+  text?: string;
+  marks?: TipTapMark[];
+  attrs?: Record<string, unknown>;
+}
+
+interface TipTapMark {
+  type: string;
+  attrs?: Record<string, unknown>;
+}
+
 function importTxtFile(
   file: File,
   editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
@@ -72,6 +86,220 @@ function importTxtFile(
     reader.onerror = () => reject(new Error("Failed to read file"));
     reader.readAsText(file);
   });
+}
+
+function importHtmlFile(
+  file: File,
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Failed to read file as text"));
+        return;
+      }
+      const html = reader.result;
+      
+      try {
+        // Parse HTML using DOMParser
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        
+        // Check for parsing errors
+        const parserError = doc.querySelector("parsererror");
+        if (parserError) {
+          reject(new Error("Invalid HTML file"));
+          return;
+        }
+        
+        // Extract body content (or full document if no body)
+        const body = doc.body || doc.documentElement;
+        const content = htmlToTipTapContent(body);
+        
+        if (content.length === 0) {
+          reject(new Error("No importable content found in HTML file"));
+          return;
+        }
+        
+        editor.commands.setContent({ type: "doc", content });
+        editor.commands.focus("start");
+        resolve();
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to import HTML file"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+function htmlToTipTapContent(element: Element): TipTapNode[] {
+  
+  function processNode(node: Node): TipTapNode[] {
+    const results: TipTapNode[] = [];
+    
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || "";
+      if (text.trim().length > 0) {
+        results.push({ type: "text", text });
+      }
+      return results;
+    }
+    
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return results;
+    }
+    
+    const el = node as Element;
+    const tagName = el.tagName.toLowerCase();
+    
+    // Handle different HTML elements
+    switch (tagName) {
+      case "p": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        if (children.length > 0) {
+          results.push({ type: "paragraph", content: children });
+        } else {
+          // Empty paragraph
+          results.push({ type: "paragraph", content: [{ type: "text", text: "" }] });
+        }
+        break;
+      }
+      case "h1":
+      case "h2":
+      case "h3":
+      case "h4":
+      case "h5":
+      case "h6": {
+        const level = parseInt(tagName[1]);
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        results.push({ type: "heading", attrs: { level }, content: children });
+        break;
+      }
+      case "strong":
+      case "b": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        // Wrap children with bold mark
+        results.push(...children.map((child: TipTapNode) => ({
+          ...child,
+          marks: [...(child.marks || []), { type: "bold" }],
+        })));
+        break;
+      }
+      case "em":
+      case "i": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        // Wrap children with italic mark
+        results.push(...children.map((child: TipTapNode) => ({
+          ...child,
+          marks: [...(child.marks || []), { type: "italic" }],
+        })));
+        break;
+      }
+      case "u": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        // Wrap children with underline mark
+        results.push(...children.map((child: TipTapNode) => ({
+          ...child,
+          marks: [...(child.marks || []), { type: "underline" }],
+        })));
+        break;
+      }
+      case "s":
+      case "strike":
+      case "del": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        results.push(...children.map((child: TipTapNode) => ({
+          ...child,
+          marks: [...(child.marks || []), { type: "strike" }],
+        })));
+        break;
+      }
+      case "code": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        results.push(...children.map((child: TipTapNode) => ({
+          ...child,
+          marks: [...(child.marks || []), { type: "code" }],
+        })));
+        break;
+      }
+      case "a": {
+        const href = el.getAttribute("href");
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        if (href) {
+          results.push(...children.map((child: TipTapNode) => ({
+            ...child,
+            marks: [...(child.marks || []), { type: "link", attrs: { href } }],
+          })));
+        } else {
+          results.push(...children);
+        }
+        break;
+      }
+      case "ul": {
+        const items = Array.from(el.querySelectorAll(":scope > li")).map((li) => {
+          const children = Array.from(li.childNodes).flatMap(processNode);
+          return { type: "listItem", content: children };
+        });
+        if (items.length > 0) {
+          results.push({ type: "bulletList", content: items });
+        }
+        break;
+      }
+      case "ol": {
+        const items = Array.from(el.querySelectorAll(":scope > li")).map((li) => {
+          const children = Array.from(li.childNodes).flatMap(processNode);
+          return { type: "listItem", content: children };
+        });
+        if (items.length > 0) {
+          results.push({ type: "orderedList", content: items });
+        }
+        break;
+      }
+      case "blockquote": {
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        if (children.length > 0) {
+          results.push({ type: "blockquote", content: children });
+        }
+        break;
+      }
+      case "br": {
+        // Line break - handle as hard break in text
+        results.push({ type: "hardBreak" });
+        break;
+      }
+      case "hr": {
+        results.push({ type: "horizontalRule" });
+        break;
+      }
+      case "div":
+      case "section":
+      case "article":
+      case "main":
+      case "body":
+      case "html": {
+        // Container elements - process children
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        results.push(...children);
+        break;
+      }
+      default: {
+        // For unknown elements, process children
+        const children = Array.from(el.childNodes).flatMap(processNode);
+        results.push(...children);
+        break;
+      }
+    }
+    
+    return results;
+  }
+  
+  const processed = Array.from(element.childNodes).flatMap(processNode);
+  
+  // Filter out any hardBreak nodes at the top level (they need to be inside paragraphs)
+  // and merge adjacent text nodes
+  return processed.filter((node: TipTapNode) => node.type !== "hardBreak");
 }
 
 /** Insert menu, which can swap its list for the link or comment form. */
@@ -653,8 +881,11 @@ export default function MenuBar() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
-            // Only handle .txt files for now
-            if (file.name.toLowerCase().endsWith(".txt") || file.type === "text/plain") {
+            const fileName = file.name.toLowerCase();
+            const isTxt = fileName.endsWith(".txt") || file.type === "text/plain";
+            const isHtml = fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html";
+            
+            if (isTxt) {
               importTxtFile(file, editor)
                 .then(() => {
                   console.log("Imported file:", {
@@ -667,8 +898,21 @@ export default function MenuBar() {
                   console.error("Failed to import TXT file:", err);
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
+            } else if (isHtml) {
+              importHtmlFile(file, editor)
+                .then(() => {
+                  console.log("Imported file:", {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                  });
+                })
+                .catch((err) => {
+                  console.error("Failed to import HTML file:", err);
+                  window.alert(`Failed to import "${file.name}": ${err.message}`);
+                });
             } else {
-              // For non-txt files, just log for now (HTML/DOCX will be implemented later)
+              // For non-txt/html files, just log for now (DOCX will be implemented later)
               console.log("Imported file (not yet supported):", {
                 name: file.name,
                 type: file.type,
