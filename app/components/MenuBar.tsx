@@ -9,12 +9,13 @@ import {
   DropdownItem,
   DropdownLabel,
   DropdownSeparator,
+  DropdownSubmenu,
 } from "./dropdown";
 import { useEditorUi } from "./editorUi";
 import { pickImageFile } from "./imageNode";
 import { BLOCK_STYLES, ZOOM_LEVELS } from "./toolbarOptions";
 import { CommentPanel, LinkPanel } from "./panels";
-import { exportAsHtml, downloadFile } from "../utils/fileExport";
+import { exportAsHtml, exportAsDocx, downloadFile } from "../utils/fileExport";
 
 /** Extract filename without extension for document title. */
 function filenameToTitle(filename: string): string {
@@ -595,14 +596,31 @@ export default function MenuBar() {
               Rename
             </DropdownItem>
             <DropdownSeparator />
-            <DropdownItem
-              onClick={() => {
-                close();
-                exportAsHtml(editor, ui.docTitle);
-              }}
+            <DropdownSubmenu
+              label="Save / Download"
+              panelClassName="w-40"
             >
-              Save / Download
-            </DropdownItem>
+              {(close) => (
+                <>
+                  <DropdownItem
+                    onClick={() => {
+                      close();
+                      exportAsHtml(editor, ui.docTitle);
+                    }}
+                  >
+                    HTML
+                  </DropdownItem>
+                  <DropdownItem
+                    onClick={() => {
+                      close();
+                      exportAsDocx(editor, ui.docTitle);
+                    }}
+                  >
+                    DOCX
+                  </DropdownItem>
+                </>
+              )}
+            </DropdownSubmenu>
             <DropdownItem
               onClick={() => {
                 close();

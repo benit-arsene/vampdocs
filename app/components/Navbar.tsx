@@ -9,8 +9,6 @@ import { useEditorUi } from "./editorUi";
 import {
   DocumentIcon,
   StarIcon,
-  FolderIcon,
-  CloudIcon,
   HistoryIcon,
   CommentIcon,
   VideoIcon,
@@ -84,11 +82,6 @@ export default function Navbar() {
   }, [starred]);
 
   const toggleStar = () => setStarred((s: boolean) => !s);
-  const openMoveMenu = () => {
-    // Frontend-only: show an alert with the current title so the user gets
-    // feedback that the action was received.
-    window.alert(`Move "${docTitle || DEFAULT_TITLE}" — choose a destination.`);
-  };
   const openVersionHistory = () => {
     window.alert("Version history is not yet connected.");
   };
@@ -97,10 +90,6 @@ export default function Navbar() {
   };
   const openVideoCall = () => {
     window.alert("Video call is not yet connected.");
-  };
-
-  const showSaveStatus = () => {
-    window.alert("Saved locally — use File → Save / Download to export as HTML.");
   };
 
   if (!editor) return null;
@@ -137,24 +126,6 @@ export default function Navbar() {
             }`}
           >
             <StarIcon className="h-4 w-4" />
-          </button>
-
-          <button
-            type="button"
-            aria-label="Move"
-            onClick={openMoveMenu}
-            className="icon-btn text-gray-600 hover:text-gray-900"
-          >
-            <FolderIcon className="h-4 w-4" />
-          </button>
-
-          <button
-            type="button"
-            aria-label="Save status"
-            onClick={showSaveStatus}
-            className="icon-btn text-gray-600 hover:text-gray-900"
-          >
-            <CloudIcon className="h-4 w-4" />
           </button>
         </div>
 

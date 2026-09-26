@@ -155,3 +155,78 @@ export function DropdownLabel({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+interface DropdownSubmenuProps {
+  label: ReactNode;
+  children: (close: () => void) => ReactNode;
+  panelClassName?: string;
+  align?: "left" | "right";
+}
+
+export function DropdownSubmenu({
+  label,
+  children,
+  panelClassName = "w-48",
+  align = "right",
+}: DropdownSubmenuProps) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div
+      className="relative"
+      ref={containerRef}
+      onPointerEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 text-gray-800"
+      >
+        <span className="flex-1">{label}</span>
+        <ChevronDownIcon className="h-3 w-3 ml-auto" />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className={`absolute left-full top-0 z-50 ml-1 rounded border border-gray-200 bg-white py-1 shadow-lg ${panelClassName} ${
+            align === "right" ? "right-0" : "left-0"
+          }`}
+          onMouseDown={(event) => event.preventDefault()}
+          onMouseLeave={() => setOpen(false)}
+        >
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
