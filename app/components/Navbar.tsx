@@ -107,7 +107,7 @@ export default function Navbar() {
   return (
     <nav className="relative z-30">
       {/* ROW 1 — DOCUMENT HEADER */}
-      <div className="doc-header flex items-center justify-between px-4 py-1.5 text-sm">
+      <div className="doc-header flex items-center justify-between px-4 py-2.5 text-sm">
         {/* LEFT: app icon + title + doc actions */}
         <div className="flex items-center gap-1">
           <div className="flex items-center justify-center rounded bg-blue-100 p-1.5">
