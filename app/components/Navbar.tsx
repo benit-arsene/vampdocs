@@ -53,6 +53,7 @@ function syncUrl(title: string): void {
   }
 }
 
+/** Trigger a browser download for the given content. */
 function loadStarred(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -88,10 +89,6 @@ export default function Navbar() {
     // feedback that the action was received.
     window.alert(`Move "${docTitle || DEFAULT_TITLE}" — choose a destination.`);
   };
-  const showSaveStatus = () => {
-    // Frontend-only: report the last saved state.
-    window.alert("Saved locally — your changes are stored in the browser.");
-  };
   const openVersionHistory = () => {
     window.alert("Version history is not yet connected.");
   };
@@ -100,6 +97,10 @@ export default function Navbar() {
   };
   const openVideoCall = () => {
     window.alert("Video call is not yet connected.");
+  };
+
+  const showSaveStatus = () => {
+    window.alert("Saved locally — use File → Save / Download to export as HTML.");
   };
 
   if (!editor) return null;

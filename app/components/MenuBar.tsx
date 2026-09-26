@@ -14,30 +14,7 @@ import { useEditorUi } from "./editorUi";
 import { pickImageFile } from "./imageNode";
 import { BLOCK_STYLES, ZOOM_LEVELS } from "./toolbarOptions";
 import { CommentPanel, LinkPanel } from "./panels";
-
-function downloadFile(name: string, contents: string, type: string) {
-  const url = URL.createObjectURL(new Blob([contents], { type }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-function documentHtml(html: string) {
-  return `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>VampDocs document</title>
-    <style>
-      body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt;
-             line-height: 1.7; max-width: 160mm; margin: 25mm auto; }
-    </style>
-  </head>
-  <body>${html}</body>
-</html>`;
-}
+import { exportAsHtml, downloadFile } from "../utils/fileExport";
 
 /** Extract filename without extension for document title. */
 function filenameToTitle(filename: string): string {
@@ -621,14 +598,10 @@ export default function MenuBar() {
             <DropdownItem
               onClick={() => {
                 close();
-                downloadFile(
-                  "document.html",
-                  documentHtml(editor.getHTML()),
-                  "text/html",
-                );
+                exportAsHtml(editor, ui.docTitle);
               }}
             >
-              Download as HTML
+              Save / Download
             </DropdownItem>
             <DropdownItem
               onClick={() => {
