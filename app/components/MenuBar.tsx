@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { convertToHtml } from "mammoth";
+import { parseOffice } from "officeparser/slim";
 
 import {
   Dropdown,
@@ -186,6 +187,122 @@ function importDocxFile(
         resolve();
       } catch (err) {
         reject(err instanceof Error ? err : new Error("Failed to import DOCX file"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function importRtfFile(
+  file: File,
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (!(reader.result instanceof ArrayBuffer)) {
+        reject(new Error("Failed to read file as array buffer"));
+        return;
+      }
+      
+      try {
+        // Parse RTF using officeparser and convert to HTML
+        const ast = await parseOffice(reader.result, { fileType: "rtf" });
+        const result = await ast.to("html");
+        
+        if (result.messages.length > 0) {
+          result.messages.forEach((msg: { message: string }) => console.warn("RTF import warning:", msg.message));
+        }
+        
+        const html = result.value;
+        
+        if (!html || html.trim().length === 0) {
+          reject(new Error("No content found in RTF file"));
+          return;
+        }
+        
+        // Parse the generated HTML using our existing HTML parser
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        
+        const parserError = doc.querySelector("parsererror");
+        if (parserError) {
+          reject(new Error("Failed to parse RTF content"));
+          return;
+        }
+        
+        const body = doc.body || doc.documentElement;
+        const content = htmlToTipTapContent(body);
+        
+        if (content.length === 0) {
+          reject(new Error("No importable content found in RTF file"));
+          return;
+        }
+        
+        editor.commands.setContent({ type: "doc", content });
+        editor.commands.focus("start");
+        resolve();
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to import RTF file"));
+      }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function importOdtFile(
+  file: File,
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (!(reader.result instanceof ArrayBuffer)) {
+        reject(new Error("Failed to read file as array buffer"));
+        return;
+      }
+      
+      try {
+        // Parse ODT using officeparser and convert to HTML
+        const ast = await parseOffice(reader.result, { fileType: "odt" });
+        const result = await ast.to("html");
+        
+        if (result.messages.length > 0) {
+          result.messages.forEach((msg: { message: string }) => console.warn("ODT import warning:", msg.message));
+        }
+        
+        const html = result.value;
+        
+        if (!html || html.trim().length === 0) {
+          reject(new Error("No content found in ODT file"));
+          return;
+        }
+        
+        // Parse the generated HTML using our existing HTML parser
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        
+        const parserError = doc.querySelector("parsererror");
+        if (parserError) {
+          reject(new Error("Failed to parse ODT content"));
+          return;
+        }
+        
+        const body = doc.body || doc.documentElement;
+        const content = htmlToTipTapContent(body);
+        
+        if (content.length === 0) {
+          reject(new Error("No importable content found in ODT file"));
+          return;
+        }
+        
+        editor.commands.setContent({ type: "doc", content });
+        editor.commands.focus("start");
+        resolve();
+      } catch (err) {
+        reject(err instanceof Error ? err : new Error("Failed to import ODT file"));
       }
     };
     reader.onerror = () => reject(new Error("Failed to read file"));
@@ -935,7 +1052,7 @@ export default function MenuBar() {
       <input
         type="file"
         ref={fileInputRef}
-        accept=".txt,.html,.htm,.docx"
+        accept=".txt,.html,.htm,.docx,.rtf,.odt"
         style={{ display: "none" }}
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -944,6 +1061,8 @@ export default function MenuBar() {
             const isTxt = fileName.endsWith(".txt") || file.type === "text/plain";
             const isHtml = fileName.endsWith(".html") || fileName.endsWith(".htm") || file.type === "text/html";
             const isDocx = fileName.endsWith(".docx") || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            const isRtf = fileName.endsWith(".rtf") || file.type === "application/rtf" || file.type === "text/rtf";
+            const isOdt = fileName.endsWith(".odt") || file.type === "application/vnd.oasis.opendocument.text";
             
             if (isTxt) {
               importTxtFile(file, editor)
@@ -982,6 +1101,32 @@ export default function MenuBar() {
                 })
                 .catch((err) => {
                   console.error("Failed to import DOCX file:", err);
+                  window.alert(`Failed to import "${file.name}": ${err.message}`);
+                });
+            } else if (isRtf) {
+              importRtfFile(file, editor)
+                .then(() => {
+                  console.log("Imported file:", {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                  });
+                })
+                .catch((err) => {
+                  console.error("Failed to import RTF file:", err);
+                  window.alert(`Failed to import "${file.name}": ${err.message}`);
+                });
+            } else if (isOdt) {
+              importOdtFile(file, editor)
+                .then(() => {
+                  console.log("Imported file:", {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size,
+                  });
+                })
+                .catch((err) => {
+                  console.error("Failed to import ODT file:", err);
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
             } else {
