@@ -9,6 +9,20 @@ import {
   type ReactNode,
 } from "react";
 
+const STORAGE_KEY = "vampdocs-document-title";
+const DEFAULT_TITLE = "Untitled document";
+
+function loadTitle(): string {
+  if (typeof window === "undefined") return DEFAULT_TITLE;
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved && saved.trim()) return saved;
+  } catch {
+    // localStorage may be unavailable (private mode, quota, etc.) — fall back.
+  }
+  return DEFAULT_TITLE;
+}
+
 /*
   The toolbar and the menu bar operate the same document, so their view state
   lives in one place instead of being threaded through props.
@@ -29,6 +43,9 @@ export type EditorUiValue = {
   /** Pageless view keeps the text flowing without A4 sheets. */
   pageless: boolean;
   setPageless: (pageless: boolean) => void;
+  /** Document title and setter. */
+  docTitle: string;
+  setDocTitle: (title: string) => void;
 };
 
 const EditorUiContext = createContext<EditorUiValue | null>(null);
@@ -54,6 +71,21 @@ export function EditorUiProvider({
   const [spellcheck, setSpellcheck] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [pageless, setPageless] = useState(false);
+  const [docTitle, setDocTitle] = useState<string>(loadTitle);
+
+  // Persist the title to localStorage on every change.
+  const setDocTitlePersisted = useMemo(() => {
+    return (title: string) => {
+      setDocTitle(title);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, title);
+        } catch {
+          // Ignore persistence errors.
+        }
+      }
+    };
+  }, []);
 
   const value = useMemo<EditorUiValue>(() => {
     const toggleSpellcheck = () => {
@@ -79,8 +111,20 @@ export function EditorUiProvider({
       setFindOpen,
       pageless,
       setPageless,
+      docTitle,
+      setDocTitle: setDocTitlePersisted,
     };
-  }, [editor, zoom, menusHidden, rulerVisible, spellcheck, findOpen, pageless]);
+  }, [
+    editor,
+    zoom,
+    menusHidden,
+    rulerVisible,
+    spellcheck,
+    findOpen,
+    pageless,
+    docTitle,
+    setDocTitlePersisted,
+  ]);
 
   return (
     <EditorUiContext.Provider value={value}>{children}</EditorUiContext.Provider>

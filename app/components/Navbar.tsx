@@ -19,7 +19,6 @@ import {
   UserIcon,
 } from "./icons";
 
-const STORAGE_KEY = "vampdocs-document-title";
 const STAR_KEY = "vampdocs-document-starred";
 const DEFAULT_TITLE = "Untitled document";
 
@@ -54,17 +53,6 @@ function syncUrl(title: string): void {
   }
 }
 
-function loadTitle(): string {
-  if (typeof window === "undefined") return DEFAULT_TITLE;
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved && saved.trim()) return saved;
-  } catch {
-    // localStorage may be unavailable (private mode, quota, etc.) — fall back.
-  }
-  return DEFAULT_TITLE;
-}
-
 function loadStarred(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -75,24 +63,13 @@ function loadStarred(): boolean {
 }
 
 export default function Navbar() {
-  const { menusHidden, editor } = useEditorUi();
-  const [docTitle, setDocTitle] = useState<string>(loadTitle);
+  const { menusHidden, editor, docTitle, setDocTitle } = useEditorUi();
   const [starred, setStarred] = useState<boolean>(loadStarred);
   const [shareOpen, setShareOpen] = useState(false);
 
   // Keep the URL in sync with the title — no reload, just replaceState.
   useEffect(() => {
     syncUrl(docTitle);
-  }, [docTitle]);
-
-  // Persist the title to localStorage on every change.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, docTitle);
-    } catch {
-      // Ignore persistence errors.
-    }
   }, [docTitle]);
 
   // Persist the starred flag.
@@ -105,7 +82,7 @@ export default function Navbar() {
     }
   }, [starred]);
 
-  const toggleStar = () => setStarred((s) => !s);
+  const toggleStar = () => setStarred((s: boolean) => !s);
   const openMoveMenu = () => {
     // Frontend-only: show an alert with the current title so the user gets
     // feedback that the action was received.

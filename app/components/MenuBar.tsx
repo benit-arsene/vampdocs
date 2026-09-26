@@ -39,6 +39,12 @@ function documentHtml(html: string) {
 </html>`;
 }
 
+/** Extract filename without extension for document title. */
+function filenameToTitle(filename: string): string {
+  const lastDot = filename.lastIndexOf(".");
+  return lastDot > 0 ? filename.slice(0, lastDot) : filename;
+}
+
 // TipTap node types for HTML import
 interface TipTapNode {
   type: string;
@@ -55,7 +61,8 @@ interface TipTapMark {
 
 function importTxtFile(
   file: File,
-  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>,
+  setDocTitle?: (title: string) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -80,6 +87,7 @@ function importTxtFile(
       try {
         editor.commands.setContent({ type: "doc", content });
         editor.commands.focus("start");
+        if (setDocTitle) setDocTitle(filenameToTitle(file.name));
         resolve();
       } catch (err) {
         reject(err);
@@ -92,7 +100,8 @@ function importTxtFile(
 
 function importHtmlFile(
   file: File,
-  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>,
+  setDocTitle?: (title: string) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -126,6 +135,7 @@ function importHtmlFile(
         
         editor.commands.setContent({ type: "doc", content });
         editor.commands.focus("start");
+        if (setDocTitle) setDocTitle(filenameToTitle(file.name));
         resolve();
       } catch (err) {
         reject(err instanceof Error ? err : new Error("Failed to import HTML file"));
@@ -138,7 +148,8 @@ function importHtmlFile(
 
 function importDocxFile(
   file: File,
-  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>,
+  setDocTitle?: (title: string) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -184,6 +195,7 @@ function importDocxFile(
         
         editor.commands.setContent({ type: "doc", content });
         editor.commands.focus("start");
+        if (setDocTitle) setDocTitle(filenameToTitle(file.name));
         resolve();
       } catch (err) {
         reject(err instanceof Error ? err : new Error("Failed to import DOCX file"));
@@ -196,7 +208,8 @@ function importDocxFile(
 
 function importRtfFile(
   file: File,
-  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>,
+  setDocTitle?: (title: string) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -242,6 +255,7 @@ function importRtfFile(
         
         editor.commands.setContent({ type: "doc", content });
         editor.commands.focus("start");
+        if (setDocTitle) setDocTitle(filenameToTitle(file.name));
         resolve();
       } catch (err) {
         reject(err instanceof Error ? err : new Error("Failed to import RTF file"));
@@ -254,7 +268,8 @@ function importRtfFile(
 
 function importOdtFile(
   file: File,
-  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>
+  editor: NonNullable<ReturnType<typeof useEditorUi>["editor"]>,
+  setDocTitle?: (title: string) => void
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -300,6 +315,7 @@ function importOdtFile(
         
         editor.commands.setContent({ type: "doc", content });
         editor.commands.focus("start");
+        if (setDocTitle) setDocTitle(filenameToTitle(file.name));
         resolve();
       } catch (err) {
         reject(err instanceof Error ? err : new Error("Failed to import ODT file"));
@@ -533,7 +549,7 @@ function InsertMenu({ close }: { close: () => void }) {
 
 export default function MenuBar() {
   const ui = useEditorUi();
-  const { editor } = ui;
+  const { editor, setDocTitle } = ui;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1065,7 +1081,7 @@ export default function MenuBar() {
             const isOdt = fileName.endsWith(".odt") || file.type === "application/vnd.oasis.opendocument.text";
             
             if (isTxt) {
-              importTxtFile(file, editor)
+              importTxtFile(file, editor, setDocTitle)
                 .then(() => {
                   console.log("Imported file:", {
                     name: file.name,
@@ -1078,7 +1094,7 @@ export default function MenuBar() {
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
             } else if (isHtml) {
-              importHtmlFile(file, editor)
+              importHtmlFile(file, editor, setDocTitle)
                 .then(() => {
                   console.log("Imported file:", {
                     name: file.name,
@@ -1091,7 +1107,7 @@ export default function MenuBar() {
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
             } else if (isDocx) {
-              importDocxFile(file, editor)
+              importDocxFile(file, editor, setDocTitle)
                 .then(() => {
                   console.log("Imported file:", {
                     name: file.name,
@@ -1104,7 +1120,7 @@ export default function MenuBar() {
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
             } else if (isRtf) {
-              importRtfFile(file, editor)
+              importRtfFile(file, editor, setDocTitle)
                 .then(() => {
                   console.log("Imported file:", {
                     name: file.name,
@@ -1117,7 +1133,7 @@ export default function MenuBar() {
                   window.alert(`Failed to import "${file.name}": ${err.message}`);
                 });
             } else if (isOdt) {
-              importOdtFile(file, editor)
+              importOdtFile(file, editor, setDocTitle)
                 .then(() => {
                   console.log("Imported file:", {
                     name: file.name,
