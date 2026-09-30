@@ -16,6 +16,7 @@ import { pickImageFile } from "./imageNode";
 import { BLOCK_STYLES, ZOOM_LEVELS } from "./toolbarOptions";
 import { CommentPanel, LinkPanel } from "./panels";
 import { exportAsHtml, exportAsDocx, downloadFile } from "../utils/fileExport";
+import { createDocument } from "../utils/documents";
 
 /** Extract filename without extension for document title. */
 function filenameToTitle(filename: string): string {
@@ -573,16 +574,24 @@ export default function MenuBar() {
         {(close) => (
           <>
             <DropdownItem
-              onClick={() => {
+              onClick={async () => {
                 close();
                 if (
-                  window.confirm(
+                  !window.confirm(
                     "Start a new document? Anything unsaved will be lost.",
                   )
                 ) {
-                  editor.commands.clearContent(true);
-                  editor.commands.focus("start");
+                  return;
                 }
+
+                const created = await createDocument();
+                if (!created) return;
+
+                // The new document owns the editor now: reset it to the empty
+                // TipTap doc and set the title from the server row.
+                editor.commands.clearContent(true);
+                editor.commands.focus("start");
+                setDocTitle(created.title);
               }}
             >
               New
