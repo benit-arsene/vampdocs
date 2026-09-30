@@ -11,6 +11,13 @@ import {
 
 const DEFAULT_TITLE = "Untitled document";
 
+/** The document a Server Component has already loaded, if any. */
+export interface InitialDocumentData {
+  id: string;
+  title: string;
+  slug: string;
+}
+
 /*
   The toolbar and the menu bar operate the same document, so their view state
   lives in one place instead of being threaded through props.
@@ -35,6 +42,12 @@ export type EditorUiValue = {
    *  when no database-backed document has been created yet. */
   documentId: string | null;
   setDocumentId: (id: string | null) => void;
+  /** The server-generated slug of the open document, or null when none is
+   *  open. This is the document's real URL — unlike the title, it does not
+   *  change when the document is renamed, and it may carry a collision suffix
+   *  that cannot be derived from the title. */
+  documentSlug: string | null;
+  setDocumentSlug: (slug: string | null) => void;
   /** Document title and setter. */
   docTitle: string;
   setDocTitle: (title: string) => void;
@@ -52,9 +65,11 @@ export function useEditorUi(): EditorUiValue {
 
 export function EditorUiProvider({
   editor,
+  initialDocument,
   children,
 }: {
   editor: Editor | null;
+  initialDocument?: InitialDocumentData;
   children: ReactNode;
 }) {
   const [zoom, setZoom] = useState(1);
@@ -66,13 +81,27 @@ export function EditorUiProvider({
   // The title belongs to the document the editor currently holds, so it starts
   // at the default rather than being restored from anywhere: nothing is loaded
   // at startup, and a stale title from a previous session would wrongly
-  // suggest that its saved document is the one on screen. `documentId` is null
-  // until a save creates a row or File → New makes one, and the row in the
-  // database is the authority once it exists.
-  const [docTitle, setDocTitle] = useState<string>(DEFAULT_TITLE);
-  // The Neon row id for the document currently open in the editor. Starts null
-  // because no database-backed document has been created yet; set by File → New.
-  const [documentId, setDocumentId] = useState<string | null>(null);
+  // suggest that its saved document is the one on screen. The database row is
+  // the authority once a document is open, and stays pure React state.
+  //
+  // These three are seeded during the first render — not in an effect — so a
+  // document opened from a `/[slug]` route already has its id before anything
+  // can read it. That is what stops the autosave from treating an opened
+  // document as a blank one and creating a duplicate row for it.
+  const [docTitle, setDocTitle] = useState<string>(
+    initialDocument?.title ?? DEFAULT_TITLE,
+  );
+  // The Neon row id for the document currently open in the editor. Null until
+  // a `/[slug]` route supplies one, File → New creates one, or a save creates
+  // the first one for the blank startup document.
+  const [documentId, setDocumentId] = useState<string | null>(
+    initialDocument?.id ?? null,
+  );
+  // The slug that addresses that row. Server-generated, so it may differ from
+  // anything derived from the title.
+  const [documentSlug, setDocumentSlug] = useState<string | null>(
+    initialDocument?.slug ?? null,
+  );
 
   const value = useMemo<EditorUiValue>(() => {
     const toggleSpellcheck = () => {
@@ -102,6 +131,8 @@ export function EditorUiProvider({
       setDocTitle,
       documentId,
       setDocumentId,
+      documentSlug,
+      setDocumentSlug,
     };
   }, [
     editor,
@@ -113,6 +144,7 @@ export function EditorUiProvider({
     pageless,
     docTitle,
     documentId,
+    documentSlug,
   ]);
 
   return (

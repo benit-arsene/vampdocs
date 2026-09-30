@@ -1,10 +1,12 @@
 /**
  * Server-side slug generation for documents.
  *
- * The normalization here is identical to the one already used by the
- * frontend in `app/components/Navbar.tsx:titleToSlug`, so a slug generated
- * server-side for a given title always matches what the frontend would
- * derive. Keeping both in one place prevents them from drifting apart.
+ * The normalization here is the single definition of how a title becomes a
+ * slug: it runs server-side when a row is created, and the resulting `slug`
+ * column is what every URL uses from then on. The frontend deliberately does
+ * not keep a second copy — it reads `document.slug` off the row rather than
+ * deriving one from the title — because a derived slug cannot reproduce the
+ * collision suffix `generateUniqueSlug` may append.
  *
  * The database's UNIQUE constraint on `documents.slug` is the final
  * authority: this helper only reduces collisions. Callers must still handle

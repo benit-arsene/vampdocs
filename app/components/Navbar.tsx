@@ -22,31 +22,28 @@ import {
 const STAR_KEY = "vampdocs-document-starred";
 const DEFAULT_TITLE = "Untitled document";
 
-/** Convert a document title into a safe URL slug. */
-function titleToSlug(title: string): string {
-  return title
-    .trim()
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "") // Remove unsafe chars (keeps letters, digits, spaces, hyphens).
-    .replace(/\s+/g, "-") // Spaces → hyphens.
-    .replace(/-+/g, "-") // Collapse repeated hyphens.
-    .replace(/^-|-$/g, ""); // Trim leading/trailing hyphens.
-}
-
-/** Update the browser URL without reloading, using the History API. */
-function syncUrl(title: string): void {
+/**
+ * Point the address bar at the document that is actually open.
+ *
+ * The slug always comes from the database row, never from the title. That
+ * matters because the server generates it with a collision suffix the title
+ * cannot reproduce, and because renaming a document does not change its slug —
+ * so a title-derived URL would drift away from the row it is meant to address.
+ *
+ * This only adjusts the address bar. The document is already loaded and its
+ * content is already in the editor, so there is nothing for the router to
+ * fetch. Real navigation — File → New, following a link to another document —
+ * goes through `next/navigation` instead.
+ */
+function syncUrl(slug: string): void {
   if (typeof window === "undefined") return;
 
-  const slug = titleToSlug(title);
-  const targetPath = slug ? `/${slug}` : "/";
+  const targetPath = `/${slug}`;
 
-  // Only update if the path actually changed — avoids polluting the history
-  // on every keystroke when the slug is identical.
+  // Only update if the path actually changed, to avoid churning history.
   if (window.location.pathname !== targetPath) {
-    const fullUrl = `${window.location.origin}${targetPath}`;
     try {
-      window.history.replaceState(null, "", fullUrl);
+      window.history.replaceState(null, "", targetPath);
     } catch {
       // Some browsers may reject non-ASCII URLs even after normalization.
     }
@@ -68,14 +65,25 @@ export default function Navbar({
 }: {
   saveStatus?: SaveStatus;
 }) {
-  const { menusHidden, editor, docTitle, setDocTitle, documentId } = useEditorUi();
+  const {
+    menusHidden,
+    editor,
+    docTitle,
+    setDocTitle,
+    documentId,
+    documentSlug,
+  } = useEditorUi();
   const [starred, setStarred] = useState<boolean>(loadStarred);
   const [shareOpen, setShareOpen] = useState(false);
 
-  // Keep the URL in sync with the title — no reload, just replaceState.
+  // Keep the address bar pointing at the open document. With no document open
+  // there is nothing to address, so `/` stays `/` — the URL must not claim to
+  // be a saved document that the editor is not showing. Renaming does not move
+  // the URL either: the slug is the server's, and a rename only PATCHes title.
   useEffect(() => {
-    syncUrl(docTitle);
-  }, [docTitle]);
+    if (!documentId || !documentSlug) return;
+    syncUrl(documentSlug);
+  }, [documentId, documentSlug]);
 
   // Persist the starred flag.
   useEffect(() => {

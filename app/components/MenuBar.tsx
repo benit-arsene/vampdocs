@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { convertToHtml } from "mammoth";
 import { parseOffice } from "officeparser/slim";
 
@@ -528,10 +529,11 @@ function InsertMenu({ close }: { close: () => void }) {
 
 export default function MenuBar() {
   const ui = useEditorUi();
-  const { editor, setDocTitle, setDocumentId } = ui;
+  const { editor, setDocTitle, setDocumentId, setDocumentSlug } = ui;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   if (!editor) return null;
 
@@ -591,11 +593,20 @@ export default function MenuBar() {
                 // the same row — without it the title input has nothing to PATCH.
                 setDocumentId(created.id);
 
+                // The slug is the server's, and it may carry a collision suffix
+                // that could never be derived from the title, so the address bar
+                // must follow the row rather than guess at one.
+                setDocumentSlug(created.slug);
+
                 // The new document owns the editor now: reset it to the empty
                 // TipTap doc and set the title from the server row.
                 editor.commands.clearContent(true);
                 editor.commands.focus("start");
                 setDocTitle(created.title);
+
+                // Show the new document at its own address, so a reload opens
+                // it rather than the one File → New replaced.
+                router.push(`/${created.slug}`);
               }}
             >
               New
