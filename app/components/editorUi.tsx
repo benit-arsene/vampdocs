@@ -15,7 +15,6 @@ const DEFAULT_TITLE = "Untitled document";
 export interface InitialDocumentData {
   id: string;
   title: string;
-  slug: string;
 }
 
 /*
@@ -39,15 +38,10 @@ export type EditorUiValue = {
   pageless: boolean;
   setPageless: (pageless: boolean) => void;
   /** The Neon row id for the document currently open in the editor, or null
-   *  when no database-backed document has been created yet. */
+   *  when no database-backed document has been created yet. This id is also
+   *  the document's URL, so it needs no separate addressing field. */
   documentId: string | null;
   setDocumentId: (id: string | null) => void;
-  /** The server-generated slug of the open document, or null when none is
-   *  open. This is the document's real URL — unlike the title, it does not
-   *  change when the document is renamed, and it may carry a collision suffix
-   *  that cannot be derived from the title. */
-  documentSlug: string | null;
-  setDocumentSlug: (slug: string | null) => void;
   /** Document title and setter. */
   docTitle: string;
   setDocTitle: (title: string) => void;
@@ -84,23 +78,18 @@ export function EditorUiProvider({
   // suggest that its saved document is the one on screen. The database row is
   // the authority once a document is open, and stays pure React state.
   //
-  // These three are seeded during the first render — not in an effect — so a
-  // document opened from a `/[slug]` route already has its id before anything
+  // These two are seeded during the first render — not in an effect — so a
+  // document opened from a `/[id]` route already has its id before anything
   // can read it. That is what stops the autosave from treating an opened
   // document as a blank one and creating a duplicate row for it.
   const [docTitle, setDocTitle] = useState<string>(
     initialDocument?.title ?? DEFAULT_TITLE,
   );
   // The Neon row id for the document currently open in the editor. Null until
-  // a `/[slug]` route supplies one, File → New creates one, or a save creates
+  // an `/[id]` route supplies one, File → New creates one, or a save creates
   // the first one for the blank startup document.
   const [documentId, setDocumentId] = useState<string | null>(
     initialDocument?.id ?? null,
-  );
-  // The slug that addresses that row. Server-generated, so it may differ from
-  // anything derived from the title.
-  const [documentSlug, setDocumentSlug] = useState<string | null>(
-    initialDocument?.slug ?? null,
   );
 
   const value = useMemo<EditorUiValue>(() => {
@@ -131,8 +120,6 @@ export function EditorUiProvider({
       setDocTitle,
       documentId,
       setDocumentId,
-      documentSlug,
-      setDocumentSlug,
     };
   }, [
     editor,
@@ -144,7 +131,6 @@ export function EditorUiProvider({
     pageless,
     docTitle,
     documentId,
-    documentSlug,
   ]);
 
   return (

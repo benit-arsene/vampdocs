@@ -25,20 +25,19 @@ const DEFAULT_TITLE = "Untitled document";
 /**
  * Point the address bar at the document that is actually open.
  *
- * The slug always comes from the database row, never from the title. That
- * matters because the server generates it with a collision suffix the title
- * cannot reproduce, and because renaming a document does not change its slug —
- * so a title-derived URL would drift away from the row it is meant to address.
+ * The id is the document's address: it is the primary key, it never changes,
+ * and — unlike a slug — it needs no generation rule and cannot drift away
+ * from the title when the document is renamed.
  *
  * This only adjusts the address bar. The document is already loaded and its
  * content is already in the editor, so there is nothing for the router to
- * fetch. Real navigation — File → New, following a link to another document —
- * goes through `next/navigation` instead.
+ * fetch. Real navigation — File → New, opening another document — goes
+ * through `next/navigation` instead.
  */
-function syncUrl(slug: string): void {
+function syncUrl(id: string): void {
   if (typeof window === "undefined") return;
 
-  const targetPath = `/${slug}`;
+  const targetPath = `/${id}`;
 
   // Only update if the path actually changed, to avoid churning history.
   if (window.location.pathname !== targetPath) {
@@ -71,7 +70,6 @@ export default function Navbar({
     docTitle,
     setDocTitle,
     documentId,
-    documentSlug,
   } = useEditorUi();
   const [starred, setStarred] = useState<boolean>(loadStarred);
   const [shareOpen, setShareOpen] = useState(false);
@@ -79,11 +77,11 @@ export default function Navbar({
   // Keep the address bar pointing at the open document. With no document open
   // there is nothing to address, so `/` stays `/` — the URL must not claim to
   // be a saved document that the editor is not showing. Renaming does not move
-  // the URL either: the slug is the server's, and a rename only PATCHes title.
+  // the URL either: the id is fixed for the life of the row.
   useEffect(() => {
-    if (!documentId || !documentSlug) return;
-    syncUrl(documentSlug);
-  }, [documentId, documentSlug]);
+    if (!documentId) return;
+    syncUrl(documentId);
+  }, [documentId]);
 
   // Persist the starred flag.
   useEffect(() => {

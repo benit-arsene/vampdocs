@@ -29,7 +29,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 
 import { createDocument, saveDocumentContent } from "@/app/utils/documents";
-import type { CreatedDocument } from "@/app/utils/documents";
 
 /** How long the editor must be idle before an autosave fires. */
 const AUTOSAVE_DEBOUNCE_MS = 800;
@@ -41,10 +40,10 @@ interface UseAutosaveOptions {
   documentId: string | null;
   onStatusChange?: (status: SaveStatus) => void;
   /**
-   * Called with the row this hook had to create, so the owner can adopt its
-   * id and slug. Never called when a document already exists.
+   * Called with the id of a document this hook had to create, so the owner
+   * can store it. Never called when a row already exists.
    */
-  onDocumentCreated?: (document: CreatedDocument) => void;
+  onDocumentCreated?: (id: string) => void;
 }
 
 interface UseAutosaveResult {
@@ -132,7 +131,7 @@ export function useAutosave({
           if (documentIdRef.current) return documentIdRef.current;
 
           documentIdRef.current = created.id;
-          onDocumentCreated?.(created);
+          onDocumentCreated?.(created.id);
           return created.id;
         },
         (err) => {

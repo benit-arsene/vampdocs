@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
@@ -15,7 +15,6 @@ import { FindPlugin } from "./find";
 import { ParagraphIndent } from "./paragraphIndent";
 import { EditorUiProvider, useEditorUi } from "./editorUi";
 import { useAutosave } from "../hooks/useAutosave";
-import type { CreatedDocument } from "../utils/documents";
 
 /**
  * A document row handed in from a Server Component, so the editor can open an
@@ -26,8 +25,6 @@ export interface InitialDocument {
   title: string;
   /** The stored TipTap JSON. */
   content: unknown;
-  /** The server-generated slug, which is the document's real URL. */
-  slug: string;
 }
 
 /** What the editor shows when no document has been opened (the `/` route). */
@@ -36,34 +33,17 @@ const BLANK_CONTENT = `
 `;
 
 function Workspace() {
-  const {
-    zoom,
-    rulerVisible,
-    editor,
-    documentId,
-    setDocumentId,
-    setDocumentSlug,
-  } = useEditorUi();
+  const { zoom, rulerVisible, editor, documentId, setDocumentId } =
+    useEditorUi();
 
-  /*
-    Called by the autosave when it has to create the very first document row
-    for the blank `/` document. Both setters are raw `useState` setters, so
-    this callback never changes identity — that keeps `performSave` stable,
-    which keeps the autosave `update` listener from re-binding (and cancelling
-    its pending debounce) on every render.
-  */
-  const handleDocumentCreated = useCallback(
-    (created: CreatedDocument) => {
-      setDocumentId(created.id);
-      setDocumentSlug(created.slug);
-    },
-    [setDocumentId, setDocumentSlug],
-  );
-
+  // `setDocumentId` is a raw useState setter, so it is referentially stable.
+  // Passing it straight through keeps `performSave` stable, which keeps the
+  // autosave `update` listener from re-binding (and cancelling its pending
+  // debounce) on every render.
   const { status: saveStatus, saveNow } = useAutosave({
     editor,
     documentId,
-    onDocumentCreated: handleDocumentCreated,
+    onDocumentCreated: setDocumentId,
   });
 
   // Ctrl/Cmd + S → save to the database immediately and stay on the page.
@@ -116,7 +96,7 @@ function Workspace() {
  *
  * `initialDocument` is what distinguishes the two entry points. Omitted (the
  * `/` route) the editor opens blank and `documentId` stays null until the user
- * types or saves. Supplied (a `/[slug]` route) the stored document is already
+ * types or saves. Supplied (an `/[id]` route) the stored document is already
  * in hand, so the content is handed straight to `useEditor` and the id is
  * seeded into context during the first render.
  *

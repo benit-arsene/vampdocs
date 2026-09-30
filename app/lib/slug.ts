@@ -1,17 +1,13 @@
 /**
  * Server-side slug generation for documents.
  *
- * The normalization here is the single definition of how a title becomes a
- * slug: it runs server-side when a row is created, and the resulting `slug`
- * column is what every URL uses from then on. The frontend deliberately does
- * not keep a second copy — it reads `document.slug` off the row rather than
- * deriving one from the title — because a derived slug cannot reproduce the
- * collision suffix `generateUniqueSlug` may append.
- *
  * The database's UNIQUE constraint on `documents.slug` is the final
  * authority: this helper only reduces collisions. Callers must still handle
  * a `23505` unique-violation error from the insert as a backstop for the
  * race between the existence check and the actual insert.
+ *
+ * Documents are addressed in the UI by their `id`, not by this slug, so
+ * nothing here has to stay in step with the frontend.
  */
 
 /** Characters used for the random uniqueness suffix. */

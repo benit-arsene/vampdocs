@@ -529,7 +529,7 @@ function InsertMenu({ close }: { close: () => void }) {
 
 export default function MenuBar() {
   const ui = useEditorUi();
-  const { editor, setDocTitle, setDocumentId, setDocumentSlug } = ui;
+  const { editor, setDocTitle, setDocumentId } = ui;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -591,12 +591,8 @@ export default function MenuBar() {
 
                 // Remember the Neon row id so renames (and later, saves) target
                 // the same row — without it the title input has nothing to PATCH.
+                // It is also the document's URL.
                 setDocumentId(created.id);
-
-                // The slug is the server's, and it may carry a collision suffix
-                // that could never be derived from the title, so the address bar
-                // must follow the row rather than guess at one.
-                setDocumentSlug(created.slug);
 
                 // The new document owns the editor now: reset it to the empty
                 // TipTap doc and set the title from the server row.
@@ -606,7 +602,7 @@ export default function MenuBar() {
 
                 // Show the new document at its own address, so a reload opens
                 // it rather than the one File → New replaced.
-                router.push(`/${created.slug}`);
+                router.push(`/${created.id}`);
               }}
             >
               New
