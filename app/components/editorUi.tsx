@@ -9,19 +9,7 @@ import {
   type ReactNode,
 } from "react";
 
-const STORAGE_KEY = "vampdocs-document-title";
 const DEFAULT_TITLE = "Untitled document";
-
-function loadTitle(): string {
-  if (typeof window === "undefined") return DEFAULT_TITLE;
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved && saved.trim()) return saved;
-  } catch {
-    // localStorage may be unavailable (private mode, quota, etc.) — fall back.
-  }
-  return DEFAULT_TITLE;
-}
 
 /*
   The toolbar and the menu bar operate the same document, so their view state
@@ -75,24 +63,16 @@ export function EditorUiProvider({
   const [spellcheck, setSpellcheck] = useState(false);
   const [findOpen, setFindOpen] = useState(false);
   const [pageless, setPageless] = useState(false);
-  const [docTitle, setDocTitle] = useState<string>(loadTitle);
+  // The title belongs to the document the editor currently holds, so it starts
+  // at the default rather than being restored from anywhere: nothing is loaded
+  // at startup, and a stale title from a previous session would wrongly
+  // suggest that its saved document is the one on screen. `documentId` is null
+  // until a save creates a row or File → New makes one, and the row in the
+  // database is the authority once it exists.
+  const [docTitle, setDocTitle] = useState<string>(DEFAULT_TITLE);
   // The Neon row id for the document currently open in the editor. Starts null
   // because no database-backed document has been created yet; set by File → New.
   const [documentId, setDocumentId] = useState<string | null>(null);
-
-  // Persist the title to localStorage on every change.
-  const setDocTitlePersisted = useMemo(() => {
-    return (title: string) => {
-      setDocTitle(title);
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(STORAGE_KEY, title);
-        } catch {
-          // Ignore persistence errors.
-        }
-      }
-    };
-  }, []);
 
   const value = useMemo<EditorUiValue>(() => {
     const toggleSpellcheck = () => {
@@ -119,7 +99,7 @@ export function EditorUiProvider({
       pageless,
       setPageless,
       docTitle,
-      setDocTitle: setDocTitlePersisted,
+      setDocTitle,
       documentId,
       setDocumentId,
     };
@@ -132,7 +112,6 @@ export function EditorUiProvider({
     findOpen,
     pageless,
     docTitle,
-    setDocTitlePersisted,
     documentId,
   ]);
 

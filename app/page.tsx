@@ -17,8 +17,16 @@ import { EditorUiProvider, useEditorUi } from "./components/editorUi";
 import { useAutosave } from "./hooks/useAutosave";
 
 function Workspace() {
-  const { zoom, rulerVisible, editor, documentId } = useEditorUi();
-  const { status: saveStatus, saveNow } = useAutosave({ editor, documentId });
+  const { zoom, rulerVisible, editor, documentId, setDocumentId } =
+    useEditorUi();
+  // `setDocumentId` is a raw useState setter, so it is referentially stable —
+  // passing it directly keeps `performSave` stable, which keeps the autosave
+  // update listener from re-binding (and cancelling its debounce) each render.
+  const { status: saveStatus, saveNow } = useAutosave({
+    editor,
+    documentId,
+    onDocumentCreated: setDocumentId,
+  });
 
   // Ctrl/Cmd + S → save to the database immediately and stay on the page.
   // Local file export remains under File → Save/Download.
@@ -37,19 +45,16 @@ function Workspace() {
       event.preventDefault();
       event.stopPropagation();
 
-      // No database row yet → nothing to save to. Do not fire a request to
-      // /api/documents/ (which would 404) and do not touch the save status.
-      if (!documentId) return;
-
       // Routes the manual save through the autosave lifecycle so the status
       // reflects this save's own outcome and no concurrent autosave can
-      // overwrite it.
+      // overwrite it. With no document id yet, the save creates the row first
+      // and adopts its id.
       saveNow();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editor, documentId, saveNow]);
+  }, [editor, saveNow]);
 
   return (
     <main className="min-h-screen">
