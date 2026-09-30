@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { ChevronDownIcon, ChevronRightIcon } from "./icons";
@@ -189,8 +196,7 @@ export function DropdownSubmenu({
 
   const updatePosition = useCallback(() => {
     const trigger = triggerRef.current;
-    const flyout = flyoutRef.current;
-    if (trigger && flyout) {
+    if (trigger) {
       const rect = trigger.getBoundingClientRect();
       setFlyoutStyle({
         top: `${rect.top}px`,
@@ -219,7 +225,11 @@ export function DropdownSubmenu({
     }, 100);
   }, [clearCloseTimer]);
 
-  useEffect(() => {
+  // The flyout is portaled with `position: fixed`, so before these coordinates
+  // are applied it would sit at its static position — on top of the parent menu
+  // and across its left border. A layout effect measures and positions it before
+  // the browser paints, so it is never visible in the wrong place.
+  useLayoutEffect(() => {
     if (!open) return;
     updatePosition();
     window.addEventListener("scroll", updatePosition, true);
@@ -291,8 +301,10 @@ export function DropdownSubmenu({
         aria-expanded={open}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-100 text-gray-800"
+        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 text-gray-800"
       >
+        {/* Same empty check column as DropdownItem so the label lines up. */}
+        <span className="w-3 shrink-0 text-blue-700" />
         <span className="flex-1">{label}</span>
         <ChevronRightIcon className="h-4 w-4 ml-auto text-gray-400" />
       </button>
