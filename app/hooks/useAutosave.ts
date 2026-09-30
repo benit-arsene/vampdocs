@@ -11,10 +11,14 @@
  * No save happens when `documentId` is null (i.e. before File → New has
  * created a database row), and no new row is ever created here.
  *
+ * Exposes `saveNow()` so Ctrl+S can cancel the pending debounce, perform
+ * an immediate save, and report its own outcome — preventing the manual
+ * save from being masked by a concurrent autosave.
+ *
  * Cleanup on unmount cancels the pending timer and detaches the listener.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 
 import { saveDocumentContent } from "@/app/utils/documents";
@@ -30,8 +34,15 @@ interface UseAutosaveOptions {
   onStatusChange?: (status: SaveStatus) => void;
 }
 
+interface UseAutosaveResult {
+  status: SaveStatus;
+  /** Cancel the pending debounce and save the current editor state now. */
+  saveNow: () => void;
+}
+
 /**
- * Returns the current save status and wires the editor to autosave.
+ * Returns the current save status, plus `saveNow()`, and wires the editor
+ * to autosave.
  *
  * The status is intentionally lightweight — it is "saving" while a save is
  * in flight, "saved" once the server acknowledges it, and "failed" if the
@@ -41,7 +52,7 @@ export function useAutosave({
   editor,
   documentId,
   onStatusChange,
-}: UseAutosaveOptions): SaveStatus {
+}: UseAutosaveOptions): UseAutosaveResult {
   const [status, setStatus] = useState<SaveStatus>("idle");
 
   // A monotonically increasing counter identifies the latest scheduled save.
@@ -52,38 +63,71 @@ export function useAutosave({
   // clear it on cleanup without re-binding.
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Keep the latest editor/documentId in refs so `saveNow` and `performSave`
+  // always read the current values without needing to re-bind on every
+  // render. Synced in an effect to avoid writing refs during render.
+  const editorRef = useRef(editor);
+  const documentIdRef = useRef(documentId);
   useEffect(() => {
-    if (!editor) return;
+    editorRef.current = editor;
+    documentIdRef.current = documentId;
+  }, [editor, documentId]);
 
-    const notify = (next: SaveStatus) => {
+  const notify = useCallback(
+    (next: SaveStatus) => {
       setStatus(next);
       onStatusChange?.(next);
-    };
+    },
+    [onStatusChange],
+  );
 
-    const fire = async () => {
-      const mySequence = ++sequenceRef.current;
-      notify("saving");
+  const performSave = useCallback(async () => {
+    const currentEditor = editorRef.current;
+    const id = documentIdRef.current;
 
-      const content = editor.getJSON();
-      const result = await saveDocumentContent(documentId ?? "", content);
+    // No database row yet — nothing to save to. This is what prevents a
+    // 404 from a request to /api/documents/ when the id is empty.
+    if (!currentEditor || !id) return;
 
-      // Only apply the outcome if this is still the latest scheduled save.
-      if (mySequence !== sequenceRef.current) return;
-      notify(result ? "saved" : "failed");
-    };
+    const mySequence = ++sequenceRef.current;
+    notify("saving");
+
+    const content = currentEditor.getJSON();
+    const result = await saveDocumentContent(id, content);
+
+    // Only apply the outcome if this is still the latest scheduled save.
+    if (mySequence !== sequenceRef.current) return;
+    notify(result ? "saved" : "failed");
+  }, [notify]);
+
+  const saveNow = useCallback(() => {
+    // Cancel any pending autosave so it cannot race with the manual save.
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    void performSave();
+  }, [performSave]);
+
+  useEffect(() => {
+    const currentEditor = editorRef.current;
+    if (!currentEditor) return;
 
     const schedule = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(fire, AUTOSAVE_DEBOUNCE_MS);
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        void performSave();
+      }, AUTOSAVE_DEBOUNCE_MS);
     };
 
-    editor.on("update", schedule);
+    currentEditor.on("update", schedule);
 
     return () => {
-      editor.off("update", schedule);
+      currentEditor.off("update", schedule);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [editor, documentId, onStatusChange]);
+  }, [editor, performSave]);
 
-  return status;
+  return { status, saveNow };
 }

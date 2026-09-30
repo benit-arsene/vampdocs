@@ -14,12 +14,11 @@ import { Image } from "./components/imageNode";
 import { FindPlugin } from "./components/find";
 import { ParagraphIndent } from "./components/paragraphIndent";
 import { EditorUiProvider, useEditorUi } from "./components/editorUi";
-import { saveDocumentContent } from "./utils/documents";
 import { useAutosave } from "./hooks/useAutosave";
 
 function Workspace() {
   const { zoom, rulerVisible, editor, documentId } = useEditorUi();
-  const saveStatus = useAutosave({ editor, documentId });
+  const { status: saveStatus, saveNow } = useAutosave({ editor, documentId });
 
   // Ctrl/Cmd + S → save to the database immediately and stay on the page.
   // Local file export remains under File → Save/Download.
@@ -27,7 +26,10 @@ function Workspace() {
     if (!editor) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      const isSave = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey &&
+      const isSave =
+        (event.ctrlKey || event.metaKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
         (event.key === "s" || event.key === "S");
 
       if (!isSave) return;
@@ -35,15 +37,19 @@ function Workspace() {
       event.preventDefault();
       event.stopPropagation();
 
-      const id = documentId;
-      if (!id) return;
+      // No database row yet → nothing to save to. Do not fire a request to
+      // /api/documents/ (which would 404) and do not touch the save status.
+      if (!documentId) return;
 
-      void saveDocumentContent(id, editor.getJSON());
+      // Routes the manual save through the autosave lifecycle so the status
+      // reflects this save's own outcome and no concurrent autosave can
+      // overwrite it.
+      saveNow();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [editor, documentId]);
+  }, [editor, documentId, saveNow]);
 
   return (
     <main className="min-h-screen">

@@ -2,8 +2,8 @@
  * Minimal client for the documents API.
  *
  * Wire-up so far:
- *   createDocument()     → POST   /api/documents
- *   renameDocument()     → PATCH  /api/documents/[id]  (title)
+ *   createDocument()      → POST   /api/documents
+ *   renameDocument()      → PATCH  /api/documents/[id]  (title)
  *   saveDocumentContent() → PATCH  /api/documents/[id]  (content)
  *
  * Loading and deleting are not implemented yet.
