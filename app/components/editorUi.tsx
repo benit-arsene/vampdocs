@@ -43,6 +43,10 @@ export type EditorUiValue = {
   /** Pageless view keeps the text flowing without A4 sheets. */
   pageless: boolean;
   setPageless: (pageless: boolean) => void;
+  /** The Neon row id for the document currently open in the editor, or null
+   *  when no database-backed document has been created yet. */
+  documentId: string | null;
+  setDocumentId: (id: string | null) => void;
   /** Document title and setter. */
   docTitle: string;
   setDocTitle: (title: string) => void;
@@ -72,6 +76,9 @@ export function EditorUiProvider({
   const [findOpen, setFindOpen] = useState(false);
   const [pageless, setPageless] = useState(false);
   const [docTitle, setDocTitle] = useState<string>(loadTitle);
+  // The Neon row id for the document currently open in the editor. Starts null
+  // because no database-backed document has been created yet; set by File → New.
+  const [documentId, setDocumentId] = useState<string | null>(null);
 
   // Persist the title to localStorage on every change.
   const setDocTitlePersisted = useMemo(() => {
@@ -113,6 +120,8 @@ export function EditorUiProvider({
       setPageless,
       docTitle,
       setDocTitle: setDocTitlePersisted,
+      documentId,
+      setDocumentId,
     };
   }, [
     editor,
@@ -124,6 +133,7 @@ export function EditorUiProvider({
     pageless,
     docTitle,
     setDocTitlePersisted,
+    documentId,
   ]);
 
   return (

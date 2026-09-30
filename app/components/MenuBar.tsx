@@ -528,7 +528,7 @@ function InsertMenu({ close }: { close: () => void }) {
 
 export default function MenuBar() {
   const ui = useEditorUi();
-  const { editor, setDocTitle } = ui;
+  const { editor, setDocTitle, setDocumentId } = ui;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [fullScreen, setFullScreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -586,6 +586,10 @@ export default function MenuBar() {
 
                 const created = await createDocument();
                 if (!created) return;
+
+                // Remember the Neon row id so renames (and later, saves) target
+                // the same row — without it the title input has nothing to PATCH.
+                setDocumentId(created.id);
 
                 // The new document owns the editor now: reset it to the empty
                 // TipTap doc and set the title from the server row.

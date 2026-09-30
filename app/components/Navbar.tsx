@@ -6,6 +6,7 @@ import MenuBar from "./MenuBar";
 import { Dropdown, DropdownItem } from "./dropdown";
 import { ShareDialog } from "./ShareDialog";
 import { useEditorUi } from "./editorUi";
+import { renameDocument } from "../utils/documents";
 import {
   DocumentIcon,
   StarIcon,
@@ -62,7 +63,7 @@ function loadStarred(): boolean {
 }
 
 export default function Navbar() {
-  const { menusHidden, editor, docTitle, setDocTitle } = useEditorUi();
+  const { menusHidden, editor, docTitle, setDocTitle, documentId } = useEditorUi();
   const [starred, setStarred] = useState<boolean>(loadStarred);
   const [shareOpen, setShareOpen] = useState(false);
 
@@ -109,9 +110,19 @@ export default function Navbar() {
             type="text"
             value={docTitle}
             onChange={(e) => setDocTitle(e.target.value)}
-            onBlur={() => {
+            onBlur={async () => {
               // If the user clears the title completely, restore the default.
-              if (!docTitle.trim()) setDocTitle(DEFAULT_TITLE);
+              const nextTitle = docTitle.trim() || DEFAULT_TITLE;
+              if (nextTitle !== docTitle) setDocTitle(nextTitle);
+
+              // Persist the rename to Neon for the document created by File → New.
+              // No-op when no database-backed document is open yet.
+              if (documentId && nextTitle) {
+                const updated = await renameDocument(documentId, nextTitle);
+                if (updated) {
+                  setDocTitle(updated.title);
+                }
+              }
             }}
             className="doc-title-input w-56 border-none bg-transparent outline-none placeholder-gray-500"
             placeholder="Untitled document"

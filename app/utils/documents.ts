@@ -1,8 +1,11 @@
 /**
  * Minimal client for the documents API.
  *
- * Only the create path is wired up here — loading, updating, and deleting
- * documents are not implemented yet.
+ * Wire-up so far:
+ *   createDocument()  → POST   /api/documents
+ *   renameDocument()  → PATCH  /api/documents/[id]
+ *
+ * Loading, content saving, and deleting are not implemented yet.
  */
 
 export interface CreatedDocument {
@@ -53,6 +56,42 @@ export async function createDocument(): Promise<CreatedDocument | null> {
   } catch (err) {
     console.error("Failed to create document:", err);
     window.alert("Failed to create document. See console for details.");
+    return null;
+  }
+}
+
+/**
+ * Rename an existing document row in Neon.
+ *
+ * PATCH /api/documents/[id]  { "title": "My Project" }
+ *
+ * The server's `documents_set_updated_at` trigger refreshes `updated_at`, so
+ * the client does not send that column. Returns the updated row, or null on
+ * failure (e.g. the row does not exist yet).
+ */
+export async function renameDocument(
+  id: string,
+  title: string,
+): Promise<CreatedDocument | null> {
+  try {
+    const response = await fetch(`/api/documents/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      window.alert(
+        `Failed to rename document: ${error?.error ?? "Unknown error"}`,
+      );
+      return null;
+    }
+
+    return (await response.json()) as CreatedDocument;
+  } catch (err) {
+    console.error("Failed to rename document:", err);
+    window.alert("Failed to rename document. See console for details.");
     return null;
   }
 }
