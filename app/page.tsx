@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
@@ -13,13 +14,40 @@ import { Image } from "./components/imageNode";
 import { FindPlugin } from "./components/find";
 import { ParagraphIndent } from "./components/paragraphIndent";
 import { EditorUiProvider, useEditorUi } from "./components/editorUi";
+import { saveDocumentContent } from "./utils/documents";
+import { useAutosave } from "./hooks/useAutosave";
 
 function Workspace() {
-  const { zoom, rulerVisible, editor } = useEditorUi();
+  const { zoom, rulerVisible, editor, documentId } = useEditorUi();
+  const saveStatus = useAutosave({ editor, documentId });
+
+  // Ctrl/Cmd + S → save to the database immediately and stay on the page.
+  // Local file export remains under File → Save/Download.
+  useEffect(() => {
+    if (!editor) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isSave = (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey &&
+        (event.key === "s" || event.key === "S");
+
+      if (!isSave) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const id = documentId;
+      if (!id) return;
+
+      void saveDocumentContent(id, editor.getJSON());
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editor, documentId]);
 
   return (
     <main className="min-h-screen">
-      <Navbar />
+      <Navbar saveStatus={saveStatus} />
 
       <Toolbar />
 

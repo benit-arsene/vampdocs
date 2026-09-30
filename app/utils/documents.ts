@@ -2,14 +2,16 @@
  * Minimal client for the documents API.
  *
  * Wire-up so far:
- *   createDocument()  → POST   /api/documents
- *   renameDocument()  → PATCH  /api/documents/[id]
+ *   createDocument()     → POST   /api/documents
+ *   renameDocument()     → PATCH  /api/documents/[id]  (title)
+ *   saveDocumentContent() → PATCH  /api/documents/[id]  (content)
  *
- * Loading, content saving, and deleting are not implemented yet.
+ * Loading and deleting are not implemented yet.
  */
 
 export interface CreatedDocument {
   id: string;
+  slug: string;
   title: string;
   content: {
     type: string;
@@ -29,7 +31,7 @@ const EMPTY_TIPTAP_DOC = {
 /**
  * Create a new document in Neon via the existing POST /api/documents route.
  *
- * The route applies the database defaults (UUID, "Untitled document",
+ * The route applies the database defaults (UUID, slug, "Untitled document",
  * empty TipTap content, created_at/updated_at), so this call sends only the
  * empty content and lets the server own the rest.
  *
@@ -92,6 +94,44 @@ export async function renameDocument(
   } catch (err) {
     console.error("Failed to rename document:", err);
     window.alert("Failed to rename document. See console for details.");
+    return null;
+  }
+}
+
+/**
+ * Persist the complete TipTap document content for an existing row.
+ *
+ * PATCH /api/documents/[id]  { content: editor.getJSON() }
+ *
+ * Only `content` is sent — title and slug are left untouched. The server's
+ * `documents_set_updated_at` trigger refreshes `updated_at`, so the client
+ * does not send that column. Returns the updated row, or null on failure.
+ *
+ * Used by both the debounced autosave and the Ctrl+S handler.
+ */
+export async function saveDocumentContent(
+  id: string,
+  content: unknown,
+): Promise<CreatedDocument | null> {
+  try {
+    const response = await fetch(`/api/documents/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      console.error(
+        `Failed to save document content (${response.status}):`,
+        error?.error ?? "Unknown error",
+      );
+      return null;
+    }
+
+    return (await response.json()) as CreatedDocument;
+  } catch (err) {
+    console.error("Failed to save document content:", err);
     return null;
   }
 }

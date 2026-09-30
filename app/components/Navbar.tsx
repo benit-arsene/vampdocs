@@ -7,6 +7,7 @@ import { Dropdown, DropdownItem } from "./dropdown";
 import { ShareDialog } from "./ShareDialog";
 import { useEditorUi } from "./editorUi";
 import { renameDocument } from "../utils/documents";
+import type { SaveStatus } from "../hooks/useAutosave";
 import {
   DocumentIcon,
   StarIcon,
@@ -62,7 +63,11 @@ function loadStarred(): boolean {
   }
 }
 
-export default function Navbar() {
+export default function Navbar({
+  saveStatus,
+}: {
+  saveStatus?: SaveStatus;
+}) {
   const { menusHidden, editor, docTitle, setDocTitle, documentId } = useEditorUi();
   const [starred, setStarred] = useState<boolean>(loadStarred);
   const [shareOpen, setShareOpen] = useState(false);
@@ -216,6 +221,23 @@ export default function Navbar() {
             <LockIcon className="h-4 w-4" />
             <span>Share</span>
           </button>
+
+          {/* Lightweight save status. Only meaningful once a database-backed
+              document is open; otherwise it renders nothing. */}
+          {saveStatus && saveStatus !== "idle" && (
+            <span
+              className={`text-xs font-medium ${
+                saveStatus === "saving"
+                  ? "text-amber-600"
+                  : saveStatus === "saved"
+                    ? "text-green-600"
+                    : "text-red-600"
+              }`}
+              aria-live="polite"
+            >
+              {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save failed"}
+            </span>
+          )}
 
           <div className="mx-1 h-5 w-px bg-gray-300" />
 
