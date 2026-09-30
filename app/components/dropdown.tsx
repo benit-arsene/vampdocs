@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
-import { ChevronDownIcon } from "./icons";
+import { ChevronDownIcon, ChevronRightIcon } from "./icons";
 
 /*
   Shared dropdown used by the toolbar and the menu bar.
@@ -101,7 +102,7 @@ export function Dropdown({
           role="menu"
           className={`absolute top-full z-50 mt-1 rounded border border-gray-200 bg-white py-1 shadow-lg ${panelClassName} ${
             align === "right" ? "right-0" : "left-0"
-          }`}
+          } overflow-visible`}
           onMouseDown={(event) => event.preventDefault()}
         >
           {children(() => setOpen(false))}
@@ -160,25 +161,89 @@ interface DropdownSubmenuProps {
   label: ReactNode;
   children: (close: () => void) => ReactNode;
   panelClassName?: string;
-  align?: "left" | "right";
 }
 
 export function DropdownSubmenu({
   label,
   children,
   panelClassName = "w-48",
-  align = "right",
 }: DropdownSubmenuProps) {
   const [open, setOpen] = useState(false);
+  const [flyoutStyle, setFlyoutStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const close = useCallback(() => {
+    clearCloseTimer();
+    setOpen(false);
+  }, [clearCloseTimer]);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const flyout = flyoutRef.current;
+    if (trigger && flyout) {
+      const rect = trigger.getBoundingClientRect();
+      setFlyoutStyle({
+        top: `${rect.top}px`,
+        left: `${rect.right + 8}px`,
+      });
+    }
+  }, []);
+
+  const handlePointerEnter = useCallback(() => {
+    clearCloseTimer();
+    setOpen(true);
+  }, [clearCloseTimer]);
+
+  const handlePointerLeave = useCallback(() => {
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      const trigger = triggerRef.current;
+      const flyout = flyoutRef.current;
+      if (
+        (trigger && trigger.matches(":hover")) ||
+        (flyout && flyout.matches(":hover"))
+      ) {
+        return;
+      }
+      setOpen(false);
+    }, 100);
+  }, [clearCloseTimer]);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
 
     const onPointerDown = (event: PointerEvent) => {
+      const container = containerRef.current;
+      const trigger = triggerRef.current;
+      const flyout = flyoutRef.current;
       if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        container &&
+        !container.contains(event.target as Node) &&
+        trigger &&
+        !trigger.contains(event.target as Node) &&
+        flyout &&
+        !flyout.contains(event.target as Node)
       ) {
         setOpen(false);
       }
@@ -195,38 +260,43 @@ export function DropdownSubmenu({
     };
   }, [open]);
 
+  const flyout = open ? (
+    createPortal(
+      <div
+        ref={flyoutRef}
+        role="menu"
+        style={flyoutStyle}
+        className={`fixed z-50 rounded border border-gray-200 bg-white py-1 shadow-lg ${panelClassName}`}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+      >
+        {children(close)}
+      </div>,
+      document.body
+    )
+  ) : null;
+
   return (
     <div
       className="relative"
       ref={containerRef}
-      onPointerEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
     >
       <button
+        ref={triggerRef}
         type="button"
         role="menuitem"
         aria-haspopup="menu"
         aria-expanded={open}
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 text-gray-800"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-100 text-gray-800"
       >
         <span className="flex-1">{label}</span>
-        <ChevronDownIcon className="h-3 w-3 ml-auto" />
+        <ChevronRightIcon className="h-4 w-4 ml-auto text-gray-400" />
       </button>
-
-      {open && (
-        <div
-          role="menu"
-          className={`absolute left-full top-0 z-50 ml-1 rounded border border-gray-200 bg-white py-1 shadow-lg ${panelClassName} ${
-            align === "right" ? "right-0" : "left-0"
-          }`}
-          onMouseDown={(event) => event.preventDefault()}
-          onMouseLeave={() => setOpen(false)}
-        >
-          {children(() => setOpen(false))}
-        </div>
-      )}
+      {flyout}
     </div>
   );
 }

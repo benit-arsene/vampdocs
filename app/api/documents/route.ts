@@ -1,0 +1,31 @@
+import { NextRequest, NextResponse } from "next/server";
+
+import { db } from "@/db";
+import { documents, EMPTY_TIPTAP_DOC, type TiptapDoc } from "@/drizzle/schema";
+
+export async function POST(request: NextRequest) {
+  let body: { title?: string; content?: TiptapDoc };
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const title = body.title?.trim() || "Untitled document";
+  const content = body.content ?? EMPTY_TIPTAP_DOC;
+
+  try {
+    const [created] = await db
+      .insert(documents)
+      .values({ title, content })
+      .returning();
+
+    return NextResponse.json(created, { status: 201 });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to create document" },
+      { status: 500 },
+    );
+  }
+}

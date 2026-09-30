@@ -110,6 +110,14 @@ export function ChevronUpIcon({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+export function ChevronRightIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} {...baseProps}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 export function SearchIcon({ className = "h-4 w-4" }: IconProps) {
   return (
     <svg className={className} {...baseProps}>
