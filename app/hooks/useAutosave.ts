@@ -22,6 +22,11 @@
  * an immediate save, and report its own outcome — preventing the manual
  * save from being masked by a concurrent autosave.
  *
+ * Every save is bound to the document the editor was showing when the save
+ * started. `cancelPendingSave()` drops the queued and the in-flight work for
+ * that document, which is what lets File → New replace the document without a
+ * late autosave writing the outgoing document's content into the new row.
+ *
  * Cleanup on unmount cancels the pending timer and detaches the listener.
  */
 
@@ -50,6 +55,15 @@ interface UseAutosaveResult {
   status: SaveStatus;
   /** Cancel the pending debounce and save the current editor state now. */
   saveNow: () => void;
+  /**
+   * Abandon every save still bound to the document currently on screen.
+   *
+   * File → New calls this before pointing the editor at the row it created, so a
+   * debounce that has not fired yet — or a save already running between its
+   * awaits — cannot write the outgoing document's content into the new one.
+   * Idempotent.
+   */
+  cancelPendingSave: () => void;
 }
 
 /**
@@ -81,6 +95,16 @@ export function useAutosave({
   // same promise and adopts its id instead of issuing a second POST, so the
   // initial document can only ever produce one row.
   const creatingRef = useRef<Promise<string | null> | null>(null);
+  // A token for "which document the editor is showing", bumped only by
+  // `cancelPendingSave()`. Every save claims the current token when it starts
+  // and re-checks it after each await; if the editor has since been pointed at a
+  // different row, that save is abandoned instead of being written to the wrong
+  // document.
+  //
+  // It is deliberately *not* bumped when `documentId` changes. The first-save
+  // flow moves `documentId` from null to the id this hook created itself, and
+  // that same save must still be allowed to PATCH the row it created.
+  const generationRef = useRef(0);
 
   // Keep the latest editor/documentId in refs so `saveNow` and `performSave`
   // always read the current values without needing to re-bind on every
@@ -154,6 +178,11 @@ export function useAutosave({
     // Claim this save's sequence *before* any await, so a save that starts
     // while a creation is in flight supersedes it and owns the status.
     const mySequence = ++sequenceRef.current;
+    // Claim the document this save belongs to, for the same reason: an awaited
+    // step below can resolve after File → New has replaced the document on
+    // screen, and what it returns then belongs to a row this save must not
+    // write to.
+    const myGeneration = generationRef.current;
     notify("saving");
 
     const content = currentEditor.getJSON();
@@ -162,6 +191,10 @@ export function useAutosave({
     // This is only reachable from an actual save, never from merely opening
     // the app.
     const id = await ensureDocument(content);
+    // The editor no longer shows the document this save was made for, so the id
+    // resolved above names the replacement. `content` belongs to the outgoing
+    // document, and writing the two together would overwrite the new one.
+    if (myGeneration !== generationRef.current) return;
     if (!id) {
       if (mySequence === sequenceRef.current) notify("failed");
       return;
@@ -169,10 +202,31 @@ export function useAutosave({
 
     const result = await saveDocumentContent(id, content);
 
-    // Only apply the outcome if this is still the latest scheduled save.
+    // Only apply the outcome if this is still the latest scheduled save, and it
+    // still concerns the document on screen.
+    if (myGeneration !== generationRef.current) return;
     if (mySequence !== sequenceRef.current) return;
     notify(result ? "saved" : "failed");
   }, [ensureDocument, notify]);
+
+  /*
+    Drop every save that has not finished for the document currently on screen.
+
+    The pending debounce is cleared outright, and the generation is bumped so
+    that a save already running between its awaits fails its next check and
+    stops. Nothing already written is undone and no edit is discarded: the only
+    work thrown away is work for a document the caller is about to stop showing.
+  */
+  const cancelPendingSave = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    generationRef.current += 1;
+    // A save left mid-flight was showing "saving" and its outcome is no longer
+    // meaningful, so the indicator returns to rest instead of being stranded.
+    notify("idle");
+  }, [notify]);
 
   const saveNow = useCallback(() => {
     // Cancel any pending autosave so it cannot race with the manual save.
@@ -189,8 +243,13 @@ export function useAutosave({
 
     const schedule = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      // Bind this save to the document on screen right now: if File → New swaps
+      // the document before the timer fires, the queued work is dropped instead
+      // of being written into the row that replaced it.
+      const myGeneration = generationRef.current;
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
+        if (myGeneration !== generationRef.current) return;
         void performSave();
       }, AUTOSAVE_DEBOUNCE_MS);
     };
@@ -203,5 +262,5 @@ export function useAutosave({
     };
   }, [editor, performSave]);
 
-  return { status, saveNow };
+  return { status, saveNow, cancelPendingSave };
 }

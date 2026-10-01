@@ -61,8 +61,11 @@ function loadStarred(): boolean {
 
 export default function Navbar({
   saveStatus,
+  cancelPendingSave,
 }: {
   saveStatus?: SaveStatus;
+  /** Forwarded to File → New so it can abandon saves for the outgoing document. */
+  cancelPendingSave: () => void;
 }) {
   const {
     menusHidden,
@@ -261,7 +264,7 @@ export default function Navbar({
       {!menusHidden && (
         <div className="app-menu flex items-center justify-between px-4 py-1 text-sm">
           <div className="flex items-center">
-            <MenuBar />
+            <MenuBar cancelPendingSave={cancelPendingSave} />
           </div>
         </div>
       )}

@@ -532,7 +532,17 @@ function InsertMenu({ close }: { close: () => void }) {
   );
 }
 
-export default function MenuBar() {
+export default function MenuBar({
+  cancelPendingSave,
+}: {
+  /**
+   * Abandons every save still queued or in flight for the document currently on
+   * screen. File → New must call this before it changes `documentId`, or a
+   * debounce that has not fired yet would resolve its id *after* the swap and
+   * PATCH this document's content into the row that just replaced it.
+   */
+  cancelPendingSave: () => void;
+}) {
   const ui = useEditorUi();
   const { editor, setDocTitle, setDocumentId } = ui;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -591,8 +601,19 @@ export default function MenuBar() {
                   return;
                 }
 
+                // Abandon this document's unsaved work *before* creating
+                // anything: the pending debounce would otherwise still be armed,
+                // and once `setDocumentId` below lands it would resolve the new
+                // id and PATCH this document's content into the new row.
+                cancelPendingSave();
+
                 const created = await createDocument();
                 if (!created) return;
+
+                // The create request above is awaited, so more typing may have
+                // armed another debounce in the meantime. Drop that too, while
+                // `documentId` still names this document.
+                cancelPendingSave();
 
                 // Remember the Neon row id so renames (and later, saves) target
                 // the same row — without it the title input has nothing to PATCH.
@@ -600,7 +621,9 @@ export default function MenuBar() {
                 setDocumentId(created.id);
 
                 // The new document owns the editor now: reset it to the empty
-                // TipTap doc and set the title from the server row.
+                // TipTap doc and set the title from the server row. This fires
+                // an update, which arms a fresh debounce — correctly bound to
+                // the new document, so it saves the new content to the new row.
                 editor.commands.clearContent(true);
                 editor.commands.focus("start");
                 setDocTitle(created.title);

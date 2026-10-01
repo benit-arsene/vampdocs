@@ -40,7 +40,7 @@ function Workspace() {
   // Passing it straight through keeps `performSave` stable, which keeps the
   // autosave `update` listener from re-binding (and cancelling its pending
   // debounce) on every render.
-  const { status: saveStatus, saveNow } = useAutosave({
+  const { status: saveStatus, saveNow, cancelPendingSave } = useAutosave({
     editor,
     documentId,
     onDocumentCreated: setDocumentId,
@@ -76,7 +76,10 @@ function Workspace() {
 
   return (
     <main className="min-h-screen">
-      <Navbar saveStatus={saveStatus} />
+      {/* File → New needs the autosave's cancel handle to abandon any save still
+          bound to the document it is replacing. */}
+      <Navbar saveStatus={saveStatus} cancelPendingSave={cancelPendingSave} />
+
 
       <Toolbar />
 
