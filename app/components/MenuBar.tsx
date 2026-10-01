@@ -333,8 +333,13 @@ function htmlToTipTapContent(element: Element): TipTapNode[] {
         if (children.length > 0) {
           results.push({ type: "paragraph", content: children });
         } else {
-          // Empty paragraph
-          results.push({ type: "paragraph", content: [{ type: "text", text: "" }] });
+          // A paragraph with no importable children stays an empty paragraph.
+          // It must NOT be emitted as `{ text: "" }`: ProseMirror rejects empty
+          // text nodes, and TipTap answers invalid content by refusing the whole
+          // transaction — so a single blank paragraph used to leave the entire
+          // imported document blank with no error shown to the user. Omitting
+          // `content` is the valid way to express an empty paragraph.
+          results.push({ type: "paragraph" });
         }
         break;
       }
