@@ -8,8 +8,8 @@ import DocumentApp from "./components/DocumentApp";
   by opening the app. The first row appears only when the user types or saves,
   which the autosave handles.
 
-  Opening a saved document is the `/[slug]` route, which looks the row up and
-  hands it to the same component.
+  Opening a saved document is the `/[id]` route, which looks the row up by its
+  UUID and hands it to the same component.
 */
 export default function Home() {
   return <DocumentApp />;

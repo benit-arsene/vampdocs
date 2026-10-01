@@ -11,7 +11,6 @@
 
 export interface CreatedDocument {
   id: string;
-  slug: string;
   title: string;
   content: {
     type: string;
@@ -44,7 +43,7 @@ export interface CreateDocumentOptions {
 /**
  * Create a new document in Neon via the existing POST /api/documents route.
  *
- * The route applies the database defaults (UUID, slug, "Untitled document",
+ * The route applies the database defaults (UUID, "Untitled document",
  * created_at/updated_at), so this call sends as little as the caller needs
  * and lets the server own the rest.
  *
@@ -135,7 +134,7 @@ export async function renameDocument(
  *
  * PATCH /api/documents/[id]  { content: editor.getJSON() }
  *
- * Only `content` is sent — title and slug are left untouched. The server's
+ * Only `content` is sent — title is left untouched. The server's
  * `documents_set_updated_at` trigger refreshes `updated_at`, so the client
  * does not send that column. Returns the updated row, or null on failure.
  *

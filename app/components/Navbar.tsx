@@ -26,8 +26,8 @@ const DEFAULT_TITLE = "Untitled document";
  * Point the address bar at the document that is actually open.
  *
  * The id is the document's address: it is the primary key, it never changes,
- * and — unlike a slug — it needs no generation rule and cannot drift away
- * from the title when the document is renamed.
+ * and it needs no generation rule and cannot drift away from the title when
+ * the document is renamed.
  *
  * This only adjusts the address bar. The document is already loaded and its
  * content is already in the editor, so there is nothing for the router to
