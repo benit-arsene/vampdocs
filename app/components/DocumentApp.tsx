@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
 
 import Navbar from "./Navbar";
 import Toolbar from "./Toolbar";
@@ -133,6 +137,16 @@ export default function DocumentApp({
       FindPlugin,
       ParagraphIndent,
       Pagination,
+      // Official TipTap table extensions, registered in the one editor instance.
+      // `Table` owns the node and the editing plugin (cell selection and the
+      // row/column commands); the other three are the child nodes it needs. A
+      // table is therefore a first-class node — real table/tableRow/tableCell/
+      // tableHeader nodes in `editor.getJSON()`, which is what `Insert → Table`
+      // inserts and what the database stores.
+      Table,
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     editorProps: {
       attributes: { spellcheck: "false" },

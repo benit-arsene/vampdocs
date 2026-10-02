@@ -15,7 +15,7 @@ import {
 import { useEditorUi } from "./editorUi";
 import { pickImageFile } from "./imageNode";
 import { BLOCK_STYLES, ZOOM_LEVELS } from "./toolbarOptions";
-import { CommentPanel, LinkPanel } from "./panels";
+import { CommentPanel, LinkPanel, TablePanel } from "./panels";
 import { exportAsHtml, exportAsDocx, downloadFile } from "../utils/fileExport";
 import { createDocument } from "../utils/documents";
 
@@ -479,15 +479,21 @@ function htmlToTipTapContent(element: Element): TipTapNode[] {
   return processed.filter((node: TipTapNode) => node.type !== "hardBreak");
 }
 
-/** Insert menu, which can swap its list for the link or comment form. */
+/** Insert menu, which can swap its list for the link, comment or table form. */
 function InsertMenu({ close }: { close: () => void }) {
   const { editor } = useEditorUi();
-  const [panel, setPanel] = useState<"link" | "comment" | null>(null);
+  const [panel, setPanel] = useState<"link" | "comment" | "table" | null>(null);
 
   if (!editor) return null;
 
   if (panel === "link") {
     return <LinkPanel editor={editor} close={close} />;
+  }
+  if (panel === "comment") {
+    return <CommentPanel editor={editor} close={close} />;
+  }
+  if (panel === "table") {
+    return <TablePanel editor={editor} close={close} />;
   }
 
   if (panel === "comment") {
@@ -518,8 +524,9 @@ function InsertMenu({ close }: { close: () => void }) {
       >
         Image
       </DropdownItem>
-      <DropdownItem onClick={() => setPanel("link")}>Link</DropdownItem>
-      <DropdownItem onClick={() => setPanel("comment")}>Comment</DropdownItem>
+<DropdownItem onClick={() => setPanel("link")}>Link</DropdownItem>
+        <DropdownItem onClick={() => setPanel("comment")}>Comment</DropdownItem>
+        <DropdownItem onClick={() => setPanel("table")}>Table</DropdownItem>
       <DropdownItem
         onClick={() => {
           editor.chain().focus().setHorizontalRule().run();
