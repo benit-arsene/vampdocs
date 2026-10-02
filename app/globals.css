@@ -173,6 +173,54 @@ body {
   outline: 2px solid #1a73e8;
 }
 
+/* ---- Tables ----
+   TipTap renders a table wrapped in a horizontally scrollable div, so nothing
+   but the cells themselves can draw the frame. With `border-collapse` the
+   shared edges collapse into a single 1px rule, which produces both the grid and
+   the outer border from one declaration. The colour reuses the --border-medium
+   token the rest of the UI uses. */
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  /* Never wider than the A4 text area, which also keeps the scrollable wrapper
+     TipTap adds around the table from ever showing a scrollbar. */
+  width: 100%;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid var(--border-medium);
+  padding: 0.375rem 0.5rem;
+  vertical-align: top;
+  /* Anchors the cell-selection highlight below. */
+  position: relative;
+}
+
+/* The header row is the one a table is inserted with, so it is shaded and set
+   in bold rather than left to the browser's centred default. */
+.ProseMirror th {
+  background: #f1f5f9;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* A cell holds block content. Without this, the paragraph margins inside it
+   would add to the cell padding and make rows different heights. */
+.ProseMirror th > p,
+.ProseMirror td > p {
+  margin: 0;
+}
+
+/* Cells covered by the current cell selection. */
+.ProseMirror td.selectedCell::after,
+.ProseMirror th.selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 115, 232, 0.12);
+  pointer-events: none;
+}
+
 /* ---- Find in document ---- */
 .find-match {
   background: rgba(255, 235, 59, 0.55);

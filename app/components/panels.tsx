@@ -1,7 +1,7 @@
 "use client";
 
 import type { Editor } from "@tiptap/react";
-import { useState } from "react";
+import { useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from "react";
 
 import { setComment } from "./marks";
 
@@ -122,14 +122,17 @@ export function CommentPanel({
 /** Practical bounds for a table picked from a menu. */
 const MIN_TABLE_SIZE = 1;
 const MAX_TABLE_SIZE = 20;
-const DEFAULT_TABLE_ROWS = 3;
-const DEFAULT_TABLE_COLS = 3;
+const DEFAULT_TABLE_ROWS = "3";
+const DEFAULT_TABLE_COLS = "3";
 
 /**
  * Clamp a typed size into the supported range.
  *
- * `Number("")` is 0 and a cleared number field is `NaN`, so both are folded back
- * into the minimum instead of reaching `insertTable`.
+ * This runs when the table is inserted, not on every keystroke. Clamping as you
+ * type would rewrite the field under the caret: clearing it gives `Number("") ===
+ * 0`, folded to the minimum, so the next digit is appended to "1" and asking for
+ * 6 rows produces 16. The fields therefore keep exactly what was typed, and the
+ * range is enforced here, on the values that actually reach `insertTable`.
  */
 function clampTableSize(value: number): number {
   if (!Number.isFinite(value)) return MIN_TABLE_SIZE;
@@ -152,8 +155,8 @@ export function TablePanel({
       .chain()
       .focus()
       .insertTable({
-        rows: clampTableSize(rows),
-        cols: clampTableSize(cols),
+        rows: clampTableSize(Number(rows)),
+        cols: clampTableSize(Number(cols)),
         // The first row is a header-cell row, and it is still one of `rows`, so a
         // "3 x 4" table really is three rows of four columns.
         withHeaderRow: true,
@@ -162,37 +165,56 @@ export function TablePanel({
     close();
   };
 
+  /*
+    The menu panel calls preventDefault on mousedown so the document selection
+    survives while it is open — which also stops a click from focusing the
+    field, which is why these boxes used to be impossible to edit. Focusing by
+    hand keeps the editor's selection intact while still letting the user click
+    in and type; selecting the contents then means typing simply replaces the
+    default instead of appending to it.
+  */
+  const focusOnMouseDown = (event: MouseEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    event.currentTarget.focus();
+  };
+  const selectOnFocus = (event: FocusEvent<HTMLInputElement>) => {
+    event.currentTarget.select();
+  };
+
+  const fieldProps = {
+    type: "number" as const,
+    min: MIN_TABLE_SIZE,
+    max: MAX_TABLE_SIZE,
+    onMouseDown: focusOnMouseDown,
+    onFocus: selectOnFocus,
+    onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") insert();
+      if (event.key === "Escape") close();
+    },
+    className:
+      "w-full rounded border border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500",
+  };
+
   return (
     <div className="w-64 p-2">
       <div className="flex items-end gap-2">
         <label className="flex-1 text-xs text-gray-600">
           <span className="mb-1 block">Rows</span>
           <input
-            type="number"
-            min={MIN_TABLE_SIZE}
-            max={MAX_TABLE_SIZE}
+            {...fieldProps}
+            autoFocus
+            aria-label="Rows"
             value={rows}
-            onChange={(event) => setRows(clampTableSize(Number(event.target.value)))}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") insert();
-              if (event.key === "Escape") close();
-            }}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
+            onChange={(event) => setRows(event.target.value)}
           />
         </label>
         <label className="flex-1 text-xs text-gray-600">
           <span className="mb-1 block">Columns</span>
           <input
-            type="number"
-            min={MIN_TABLE_SIZE}
-            max={MAX_TABLE_SIZE}
+            {...fieldProps}
+            aria-label="Columns"
             value={cols}
-            onChange={(event) => setCols(clampTableSize(Number(event.target.value)))}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") insert();
-              if (event.key === "Escape") close();
-            }}
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
+            onChange={(event) => setCols(event.target.value)}
           />
         </label>
       </div>
@@ -202,7 +224,6 @@ export function TablePanel({
       <div className="mt-2 flex items-center gap-2">
         <button
           type="button"
-          autoFocus
           onClick={insert}
           className="rounded bg-blue-600 px-2 py-1 text-sm text-white hover:bg-blue-700"
         >
