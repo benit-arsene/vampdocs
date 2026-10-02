@@ -177,8 +177,8 @@ body {
    TipTap renders a table wrapped in a horizontally scrollable div, so nothing
    but the cells themselves can draw the frame. With `border-collapse` the
    shared edges collapse into a single 1px rule, which produces both the grid and
-   the outer border from one declaration. The colour reuses the --border-medium
-   token the rest of the UI uses. */
+   the outer border from one declaration. The colour is pure black so the grid
+   reads as a printed table rather than a soft UI divider. */
 .ProseMirror table {
   border-collapse: collapse;
   table-layout: fixed;
@@ -189,7 +189,7 @@ body {
 
 .ProseMirror th,
 .ProseMirror td {
-  border: 1px solid var(--border-medium);
+  border: 1px solid #000;
   padding: 0.375rem 0.5rem;
   vertical-align: top;
   /* Anchors the cell-selection highlight below. */
